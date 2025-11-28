@@ -37,7 +37,7 @@ impl ConversationManager {
     pub fn get_history(&self) -> &VecDeque<Message> {
         &self.history
     }
-    
+
     #[allow(dead_code)]
     pub fn clear(&mut self) {
         self.history.clear();
@@ -54,7 +54,7 @@ mod tests {
         mgr.add_message("user", "1");
         mgr.add_message("assistant", "2");
         mgr.add_message("user", "3");
-        
+
         assert_eq!(mgr.get_history().len(), 3);
         assert_eq!(mgr.get_history()[0].content, "1");
 

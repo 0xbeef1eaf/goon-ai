@@ -1,3 +1,3 @@
 pub mod client;
-pub mod prompt;
 pub mod conversation;
+pub mod prompt;

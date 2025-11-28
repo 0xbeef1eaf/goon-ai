@@ -21,17 +21,21 @@ impl PromptBuilder {
         // 1. System Prompt
         system_content.push_str("# System Prompt\n");
         // TODO: Load system prompt from pack config if available, or use default
-        system_content.push_str("You are an AI assistant designed to help test the functionality of goon.ai.\n");
-        system_content.push_str("You can display images, play videos, and play audio using the provided SDK.\n\n");
+        system_content.push_str(
+            "You are an AI assistant designed to help test the functionality of goon.ai.\n",
+        );
+        system_content.push_str(
+            "You can display images, play videos, and play audio using the provided SDK.\n\n",
+        );
 
         // 2. Mood
         system_content.push_str("# Current Mood\n");
         system_content.push_str(&format!("The user's current mood is: **{}**\n", mood));
         // Find mood description
         if let Some(m) = pack_config.moods.iter().find(|m| m.name == mood) {
-             system_content.push_str(&format!("{}\n\n", m.description));
+            system_content.push_str(&format!("{}\n\n", m.description));
         } else {
-             system_content.push('\n');
+            system_content.push('\n');
         }
 
         // 3. SDK Definitions
@@ -48,7 +52,9 @@ impl PromptBuilder {
 
         // 5. Task
         system_content.push_str("# Your Task\n");
-        system_content.push_str("Generate TypeScript code using the SDK functions above to interact with the user.\n");
+        system_content.push_str(
+            "Generate TypeScript code using the SDK functions above to interact with the user.\n",
+        );
 
         messages.push(ChatMessage::new(MessageRole::System, system_content));
 
@@ -70,7 +76,7 @@ impl PromptBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::pack::{PackMeta, Mood, Assets};
+    use crate::config::pack::{Assets, Mood, PackMeta};
     use crate::config::settings::User;
 
     fn create_dummy_pack_config() -> PackConfig {
@@ -80,13 +86,11 @@ mod tests {
                 version: "1.0.0".to_string(),
                 permissions: vec![],
             },
-            moods: vec![
-                Mood {
-                    name: "Happy".to_string(),
-                    description: "A happy mood description.".to_string(),
-                    tags: vec!["happy".to_string()],
-                }
-            ],
+            moods: vec![Mood {
+                name: "Happy".to_string(),
+                description: "A happy mood description.".to_string(),
+                tags: vec!["happy".to_string()],
+            }],
             assets: Assets {
                 image: None,
                 video: None,
@@ -113,19 +117,18 @@ mod tests {
         history.add_message("user", "Hello");
         history.add_message("assistant", "Hi there");
 
-        let messages = PromptBuilder::build(
-            &pack_config,
-            "Happy",
-            &user,
-            &history,
-        );
+        let messages = PromptBuilder::build(&pack_config, "Happy", &user, &history);
 
         assert_eq!(messages.len(), 3); // System + User + Assistant
-        
+
         let system_msg = &messages[0];
         assert_eq!(system_msg.role, MessageRole::System);
         assert!(system_msg.content.contains("# System Prompt"));
-        assert!(system_msg.content.contains("The user's current mood is: **Happy**"));
+        assert!(
+            system_msg
+                .content
+                .contains("The user's current mood is: **Happy**")
+        );
         assert!(system_msg.content.contains("A happy mood description."));
         assert!(system_msg.content.contains("Name: Test User"));
         assert!(system_msg.content.contains("# Your Task"));
