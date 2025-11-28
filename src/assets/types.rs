@@ -2,6 +2,7 @@ use std::path::PathBuf;
 use std::time::Duration;
 
 #[derive(Debug, Clone, PartialEq)]
+#[allow(dead_code)]
 pub enum Asset {
     Image(ImageAsset),
     Video(VideoAsset),
@@ -9,6 +10,7 @@ pub enum Asset {
 }
 
 impl Asset {
+    #[allow(dead_code)]
     pub fn get_path(&self) -> &PathBuf {
         match self {
             Asset::Image(a) => &a.path,
@@ -17,6 +19,7 @@ impl Asset {
         }
     }
 
+    #[allow(dead_code)]
     pub fn get_tags(&self) -> &Vec<String> {
         match self {
             Asset::Image(a) => &a.tags,
@@ -27,12 +30,14 @@ impl Asset {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+#[allow(dead_code)]
 pub struct ImageAsset {
     pub path: PathBuf,
     pub tags: Vec<String>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
+#[allow(dead_code)]
 pub struct VideoAsset {
     pub path: PathBuf,
     pub tags: Vec<String>,
@@ -40,6 +45,7 @@ pub struct VideoAsset {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+#[allow(dead_code)]
 pub struct AudioAsset {
     pub path: PathBuf,
     pub tags: Vec<String>,

@@ -3,23 +3,28 @@ use crate::assets::types::Asset;
 use crate::assets::registry::AssetRegistry;
 use crate::config::pack::Mood;
 
+#[allow(dead_code)]
 pub struct AssetSelector<'a> {
     registry: &'a AssetRegistry,
 }
 
 impl<'a> AssetSelector<'a> {
+    #[allow(dead_code)]
     pub fn new(registry: &'a AssetRegistry) -> Self {
         Self { registry }
     }
 
+    #[allow(dead_code)]
     pub fn select_image(&self, mood: &Mood, tags: &[String]) -> Option<&Asset> {
         self.select_from(&self.registry.images, mood, tags)
     }
 
+    #[allow(dead_code)]
     pub fn select_video(&self, mood: &Mood, tags: &[String]) -> Option<&Asset> {
         self.select_from(&self.registry.videos, mood, tags)
     }
 
+    #[allow(dead_code)]
     pub fn select_audio(&self, mood: &Mood, tags: &[String]) -> Option<&Asset> {
         self.select_from(&self.registry.audio, mood, tags)
     }

@@ -4,9 +4,11 @@ use crate::config::pack::PackConfig;
 use crate::assets::registry::AssetRegistry;
 use crate::assets::types::{Asset, ImageAsset, VideoAsset, AudioAsset};
 
+#[allow(dead_code)]
 pub struct AssetLoader;
 
 impl AssetLoader {
+    #[allow(dead_code)]
     pub fn load(pack_config: &PackConfig, pack_name: &str) -> Result<AssetRegistry> {
         let mut registry = AssetRegistry::new();
         let base_path = Path::new("packs").join(pack_name);
