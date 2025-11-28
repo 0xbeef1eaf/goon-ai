@@ -15,20 +15,40 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Install system dependencies for rusty_v8/v8
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            python3 python3-venv \
-            git curl clang g++ make ninja-build pkg-config lld \
-            build-essential libglib2.0-dev ca-certificates
-          sudo ln -sf /usr/bin/python3 /usr/bin/python
-          python3 -m pip install --upgrade pip
-          python3 -m pip install setuptools
-          git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git /tmp/depot_tools
-          echo "/tmp/depot_tools" >> $GITHUB_PATH
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
+      - name: Cache rusty_v8 binaries
+        uses: actions/cache@v3
+        id: v8-cache
+        with:
+          path: /tmp/rusty_v8_mirror
+          key: rusty_v8-${{ hashFiles('Cargo.lock') }}
+      - name: Download rusty_v8 prebuilt binaries
+        if: steps.v8-cache.outputs.cache-hit != 'true'
+        run: |
+          V8_VERSION=$(cargo pkgid --locked v8 | cut -d'@' -f2 | tr -d '\n')
+          REPO="https://github.com/denoland/rusty_v8/releases/download/${V8_VERSION}"
+          RUSTY_V8_MIRROR=/tmp/rusty_v8_mirror
+          mkdir -p $RUSTY_V8_MIRROR
+
+          # Download all assets from the release
+          RELEASE_API="https://api.github.com/repos/denoland/rusty_v8/releases/tags/v${V8_VERSION}"
+          ASSETS=$(curl -s "$RELEASE_API" | grep -o '"browser_download_url": "[^"]*"' | cut -d'"' -f4)
+
+          for url in $ASSETS; do
+            filename=$(basename "$url")
+            echo "Downloading $filename..."
+            curl -L -o "$RUSTY_V8_MIRROR/$filename" "$url"
+          done
+
+          echo "Downloaded files:"
+          ls -lh $RUSTY_V8_MIRROR
+
+          echo "Decompressing files..."
+          gunzip $RUSTY_V8_MIRROR/*.gz
+          echo "Decompression complete."
+      - name: Set rusty_v8 mirror environment
+        run: echo "RUSTY_V8_MIRROR=/tmp/rusty_v8_mirror" >> $GITHUB_ENV
       - uses: Swatinem/rust-cache@v2
       - name: Build
         run: cargo build --verbose
