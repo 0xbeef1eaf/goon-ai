@@ -1,11 +1,13 @@
+#![allow(dead_code)]
 pub fn generate_typescript_definitions(allowed_modules: &[String]) -> String {
     let mut definitions = String::new();
-    
+
     definitions.push_str("/** GoonAI SDK */\n");
     definitions.push_str("type WindowHandle = number;\n");
-    
+
     if allowed_modules.contains(&"image".to_string()) {
-         definitions.push_str(r#"
+        definitions.push_str(
+            r#"
 /**
  * Display an image on screen
  * @param path - Asset path or tag query
@@ -20,9 +22,10 @@ declare function showImage(
       alwaysOnTop?: boolean;
     }
 ): Promise<WindowHandle>;
-"#);
+"#,
+        );
     }
-    
+
     definitions
 }
 

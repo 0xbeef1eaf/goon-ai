@@ -1,12 +1,12 @@
+use crate::typescript::error::CompilationError;
 use std::sync::Arc;
 use swc::Compiler;
 use swc_common::{
+    FileName, GLOBALS, Globals, SourceMap,
     errors::{ColorConfig, Handler},
-    FileName, SourceMap, GLOBALS, Globals,
 };
 use swc_ecma_ast::EsVersion;
 use swc_ecma_parser::{Syntax, TsSyntax};
-use crate::typescript::error::CompilationError;
 
 pub struct TypeScriptCompiler {
     compiler: Arc<Compiler>,
@@ -23,12 +23,8 @@ impl TypeScriptCompiler {
     pub fn compile(&self, source: &str) -> Result<String, CompilationError> {
         let globals = Globals::new();
         GLOBALS.set(&globals, || {
-            let handler = Handler::with_tty_emitter(
-                ColorConfig::Auto,
-                true,
-                false,
-                Some(self.cm.clone()),
-            );
+            let handler =
+                Handler::with_tty_emitter(ColorConfig::Auto, true, false, Some(self.cm.clone()));
 
             let fm = self.cm.new_source_file(
                 FileName::Custom("script.ts".into()).into(),
@@ -59,14 +55,12 @@ impl TypeScriptCompiler {
 
             match result {
                 Ok(output) => Ok(output.code),
-                Err(e) => {
-                    Err(CompilationError {
-                        message: e.to_string(),
-                        line: 0, 
-                        column: 0,
-                        source_snippet: String::new(),
-                    })
-                }
+                Err(e) => Err(CompilationError {
+                    message: e.to_string(),
+                    line: 0,
+                    column: 0,
+                    source_snippet: String::new(),
+                }),
             }
         })
     }

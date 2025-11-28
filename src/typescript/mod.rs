@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports)]
 pub mod compiler;
 pub mod error;
 pub mod sdk_generator;
