@@ -5,7 +5,7 @@ use winit::window::WindowId;
 use std::sync::{Arc, Mutex};
 use std::sync::mpsc::Sender;
 use anyhow::Result;
-use super::window_manager::{WindowManager, WindowOptions, WindowHandle};
+use super::window_manager::{WindowManager, WindowOptions, WindowHandle, WindowMessage};
 
 pub enum GuiCommand {
     CreateWindow(WindowOptions, Sender<Result<WindowHandle>>),
@@ -62,7 +62,7 @@ impl ApplicationHandler<GuiCommand> for App {
             WindowEvent::CloseRequested => {
                 let mut wm = self.window_manager.lock().unwrap();
                 if let Some(handle) = wm.get_handle_from_winit(window_id) {
-                    wm.close_window(handle);
+                    wm.push_message(WindowMessage::CloseRequested(handle));
                 }
             },
             WindowEvent::Resized(physical_size) => {
@@ -73,14 +73,16 @@ impl ApplicationHandler<GuiCommand> for App {
                             renderer.resize(physical_size);
                         }
                     }
+                    wm.push_message(WindowMessage::Resized(handle, physical_size.width, physical_size.height));
                 }
             },
             WindowEvent::RedrawRequested => {
                 let mut wm = self.window_manager.lock().unwrap();
                 if let Some(handle) = wm.get_handle_from_winit(window_id) {
                     if let Some(window) = wm.get_window_mut(handle) {
+                        let opacity = window.get_render_opacity();
                         if let Some(renderer) = &mut window.renderer {
-                            match renderer.render() {
+                            match renderer.render(opacity) {
                                 Ok(_) => {},
                                 Err(wgpu::SurfaceError::Lost) => renderer.resize(window.winit_window.inner_size()),
                                 Err(wgpu::SurfaceError::OutOfMemory) => event_loop.exit(),
@@ -88,6 +90,24 @@ impl ApplicationHandler<GuiCommand> for App {
                             }
                         }
                     }
+                }
+            },
+            WindowEvent::KeyboardInput { event, .. } => {
+                let mut wm = self.window_manager.lock().unwrap();
+                if let Some(handle) = wm.get_handle_from_winit(window_id) {
+                    wm.push_message(WindowMessage::KeyboardInput(handle, event));
+                }
+            },
+            WindowEvent::CursorMoved { position, .. } => {
+                let mut wm = self.window_manager.lock().unwrap();
+                if let Some(handle) = wm.get_handle_from_winit(window_id) {
+                    wm.push_message(WindowMessage::CursorMoved(handle, position.x, position.y));
+                }
+            },
+            WindowEvent::MouseInput { state, button, .. } => {
+                let mut wm = self.window_manager.lock().unwrap();
+                if let Some(handle) = wm.get_handle_from_winit(window_id) {
+                    wm.push_message(WindowMessage::MouseInput(handle, button, state));
                 }
             },
             _ => (),

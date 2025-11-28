@@ -12,6 +12,16 @@ use super::window::Window;
 pub struct WindowHandle(pub Uuid);
 
 use std::time::{Duration, Instant};
+use winit::event::{ElementState, KeyEvent, MouseButton};
+
+#[derive(Debug, Clone)]
+pub enum WindowMessage {
+    CloseRequested(WindowHandle),
+    Resized(WindowHandle, u32, u32),
+    KeyboardInput(WindowHandle, KeyEvent),
+    MouseInput(WindowHandle, MouseButton, ElementState),
+    CursorMoved(WindowHandle, f64, f64),
+}
 
 #[derive(Debug, Clone)]
 pub struct WindowOptions {
@@ -72,6 +82,7 @@ pub struct WindowManager {
     windows: HashMap<WindowHandle, Window>,
     winit_to_handle: HashMap<WindowId, WindowHandle>,
     deadlines: Vec<(Instant, WindowHandle)>,
+    messages: Vec<WindowMessage>,
 }
 
 impl WindowManager {
@@ -80,6 +91,7 @@ impl WindowManager {
             windows: HashMap::new(),
             winit_to_handle: HashMap::new(),
             deadlines: Vec::new(),
+            messages: Vec::new(),
         }
     }
 
@@ -141,5 +153,23 @@ impl WindowManager {
 
     pub fn get_handle_from_winit(&self, window_id: WindowId) -> Option<WindowHandle> {
         self.winit_to_handle.get(&window_id).copied()
+    }
+
+    pub fn push_message(&mut self, message: WindowMessage) {
+        self.messages.push(message);
+    }
+
+    pub fn poll_messages(&mut self) -> Vec<WindowMessage> {
+        std::mem::take(&mut self.messages)
+    }
+
+    #[cfg(test)]
+    pub fn add_test_deadline(&mut self, handle: WindowHandle, timeout: Duration) {
+        self.deadlines.push((std::time::Instant::now() + timeout, handle));
+    }
+    
+    #[cfg(test)]
+    pub fn get_window_count(&self) -> usize {
+        self.windows.len()
     }
 }

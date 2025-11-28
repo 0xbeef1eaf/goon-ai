@@ -4,10 +4,12 @@ use winit::event_loop::ActiveEventLoop;
 use super::window_manager::WindowOptions;
 use super::renderer::Renderer;
 use std::sync::Arc;
+use raw_window_handle::{HasWindowHandle, RawWindowHandle};
 
 pub struct Window {
     pub winit_window: Arc<WinitWindow>,
     pub renderer: Option<Renderer>,
+    pub opacity: f32,
 }
 
 impl Window {
@@ -39,6 +41,7 @@ impl Window {
         Ok(Self {
             winit_window,
             renderer: None,
+            opacity: options.opacity,
         })
     }
 
@@ -61,8 +64,85 @@ impl Window {
         self.winit_window.set_cursor_hittest(!click_through).map_err(|e| anyhow::anyhow!(e))
     }
 
-    pub fn set_opacity(&self, opacity: f32) {
-        // TODO: Implement platform-specific opacity
-        // This requires accessing raw window handles and calling platform APIs
+    pub fn set_opacity(&mut self, opacity: f32) {
+        self.opacity = opacity;
+        let handle_wrapper = match self.winit_window.window_handle() {
+            Ok(h) => h,
+            Err(_) => return,
+        };
+        let handle = handle_wrapper.as_raw();
+
+        #[cfg(target_os = "windows")]
+        if let RawWindowHandle::Win32(handle) = handle {
+            use windows_sys::Win32::UI::WindowsAndMessaging::{
+                GetWindowLongPtrW, SetWindowLongPtrW, SetLayeredWindowAttributes,
+                GWL_EXSTYLE, WS_EX_LAYERED, LWA_ALPHA,
+            };
+            use windows_sys::Win32::Foundation::HWND;
+
+            let hwnd = handle.hwnd.get() as HWND;
+            unsafe {
+                let style = GetWindowLongPtrW(hwnd, GWL_EXSTYLE);
+                // Ensure WS_EX_LAYERED is set
+                if (style as u32 & WS_EX_LAYERED) == 0 {
+                    SetWindowLongPtrW(hwnd, GWL_EXSTYLE, style | WS_EX_LAYERED as isize);
+                }
+                let alpha = (opacity.clamp(0.0, 1.0) * 255.0) as u8;
+                SetLayeredWindowAttributes(hwnd, 0, alpha, LWA_ALPHA);
+            }
+        }
+
+        #[cfg(target_os = "macos")]
+        if let RawWindowHandle::AppKit(handle) = handle {
+            use objc::{msg_send, sel, sel_impl};
+            let ns_window = handle.ns_window.as_ptr() as *mut objc::runtime::Object;
+            unsafe {
+                let _: () = msg_send![ns_window, setAlphaValue: opacity.clamp(0.0, 1.0) as f64];
+            }
+        }
+
+        #[cfg(target_os = "linux")]
+        match handle {
+            RawWindowHandle::Xlib(handle) => {
+                use x11rb::connection::Connection;
+                use x11rb::protocol::xproto::{AtomEnum, ConnectionExt as XProtoConnectionExt, PropMode};
+                use x11rb::wrapper::ConnectionExt;
+                
+                if let Ok((conn, _)) = x11rb::connect(None) {
+                    let window_id = handle.window as u32;
+                    let atom_name = b"_NET_WM_WINDOW_OPACITY";
+                    
+                    if let Some(reply) = conn.intern_atom(false, atom_name).ok().and_then(|c| c.reply().ok()) {
+                        let atom = reply.atom;
+                        let opacity_u32 = (opacity.clamp(0.0, 1.0) * 0xFFFFFFFFu32 as f32) as u32;
+                        
+                        let _ = conn.change_property32(
+                            PropMode::REPLACE,
+                            window_id,
+                            atom,
+                            AtomEnum::CARDINAL,
+                            &[opacity_u32],
+                        );
+                        let _ = conn.flush();
+                    }
+                }
+            },
+            RawWindowHandle::Wayland(_) => {
+                // Wayland does not support server-side window opacity via standard protocols.
+                // Opacity must be handled during rendering by applying alpha to the content.
+                // The self.opacity field is updated and should be used by the renderer.
+            },
+            _ => {}
+        }
+    }
+
+    pub fn get_render_opacity(&self) -> f32 {
+        #[cfg(target_os = "linux")]
+        if let Ok(handle) = self.winit_window.window_handle() {
+            if let RawWindowHandle::Wayland(_) = handle.as_raw() {
+                return self.opacity;
+            }
+        }
+        1.0
     }
 }

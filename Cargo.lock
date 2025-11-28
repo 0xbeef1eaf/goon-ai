@@ -1537,6 +1537,7 @@ dependencies = [
  "deno_core",
  "deno_error",
  "image",
+ "objc",
  "ollama-rs",
  "rand 0.9.2",
  "raw-window-handle",
@@ -1554,7 +1555,9 @@ dependencies = [
  "uuid",
  "walkdir",
  "wgpu",
+ "windows-sys 0.52.0",
  "winit",
+ "x11rb",
 ]
 
 [[package]]
