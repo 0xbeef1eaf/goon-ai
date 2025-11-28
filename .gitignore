@@ -1,0 +1,25 @@
+# Rust build files
+/target
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.iml
+
+# Logs
+*.log
+
+# Config files
+settings.yaml
+
+# Temporary files
+*.tmp
+*.swp
+
+# Packs
+/packs/*
+!/packs/TestPack/

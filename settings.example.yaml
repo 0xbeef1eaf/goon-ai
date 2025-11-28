@@ -1,0 +1,38 @@
+# This contains the user settings for GoonAI.
+user:
+  name: Joe Bloggs
+  dob: 1990-01-01
+  gender: male
+
+llmSettings:
+  host: "http://localhost:11434" # Ollama server host
+
+runtime:
+  popups:
+    image:
+      enabled: true
+      timeout: 10
+      mitosis:
+        enabled: false
+        factor: 2
+      max: 5
+    video:
+      enabled: true
+      timeout: 15
+      max: 3
+    audio:
+      enabled: true
+      timeout: 5
+      max: 1
+    wallpaper:
+      enabled: true
+  permissions:
+    - image
+    - video
+    - audio
+    - prompt
+    - wallpaper
+    - website
+  pack:
+    current: Test Pack
+    mood: default
