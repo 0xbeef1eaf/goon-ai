@@ -29,7 +29,7 @@ jobs:
           V8_VERSION=$(cargo pkgid --locked v8 | cut -d'@' -f2 | tr -d '\n')
           REPO="https://github.com/denoland/rusty_v8/releases/download/${V8_VERSION}"
           RUSTY_V8_MIRROR=/tmp/rusty_v8_mirror
-          mkdir -p $RUSTY_V8_MIRROR
+          mkdir -p $RUSTY_V8_MIRROR/$V8_VERSION
 
           # Download all assets from the release
           RELEASE_API="https://api.github.com/repos/denoland/rusty_v8/releases/tags/v${V8_VERSION}"
@@ -38,14 +38,13 @@ jobs:
           for url in $ASSETS; do
             filename=$(basename "$url")
             echo "Downloading $filename..."
-            curl -L -o "$RUSTY_V8_MIRROR/$filename" "$url"
+            curl -L -o "$RUSTY_V8_MIRROR/$V8_VERSION/$filename" "$url"
           done
 
           echo "Downloaded files:"
-          ls -lh $RUSTY_V8_MIRROR
-
+          ls -lh $RUSTY_V8_MIRROR/$V8_VERSION
           echo "Decompressing files..."
-          gunzip $RUSTY_V8_MIRROR/*.gz
+          gunzip $RUSTY_V8_MIRROR/$V8_VERSION/*.gz
           echo "Decompression complete."
       - name: Set rusty_v8 mirror environment
         run: echo "RUSTY_V8_MIRROR=/tmp/rusty_v8_mirror" >> $GITHUB_ENV
