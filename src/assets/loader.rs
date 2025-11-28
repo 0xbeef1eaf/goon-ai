@@ -1,5 +1,5 @@
 use crate::assets::registry::AssetRegistry;
-use crate::assets::types::{Asset, AudioAsset, ImageAsset, VideoAsset};
+use crate::assets::types::{Asset, AudioAsset, HypnoAsset, ImageAsset, VideoAsset, WallpaperAsset};
 use crate::config::pack::PackConfig;
 use anyhow::Result;
 use std::path::Path;
@@ -19,6 +19,8 @@ impl AssetLoader {
                 registry.add(Asset::Image(ImageAsset {
                     path,
                     tags: img.tags.clone(),
+                    width: 0,
+                    height: 0,
                 }));
             }
         }
@@ -29,7 +31,9 @@ impl AssetLoader {
                 registry.add(Asset::Video(VideoAsset {
                     path,
                     tags: vid.tags.clone(),
-                    duration: None, // Duration loading can be added later
+                    duration: None,
+                    width: 0,
+                    height: 0,
                 }));
             }
         }
@@ -41,6 +45,27 @@ impl AssetLoader {
                     path,
                     tags: aud.tags.clone(),
                     duration: None,
+                }));
+            }
+        }
+
+        if let Some(hypnos) = &pack_config.assets.hypno {
+            for hyp in hypnos {
+                let path = base_path.join(&hyp.path);
+                registry.add(Asset::Hypno(HypnoAsset {
+                    path,
+                    tags: hyp.tags.clone(),
+                    is_animated: true,
+                }));
+            }
+        }
+
+        if let Some(wallpapers) = &pack_config.assets.wallpaper {
+            for wall in wallpapers {
+                let path = base_path.join(&wall.path);
+                registry.add(Asset::Wallpaper(WallpaperAsset {
+                    path,
+                    tags: wall.tags.clone(),
                 }));
             }
         }
@@ -73,6 +98,8 @@ mod tests {
                     tags: vec!["tag2".to_string()],
                 }]),
                 audio: None,
+                hypno: None,
+                wallpaper: None,
             },
         };
 

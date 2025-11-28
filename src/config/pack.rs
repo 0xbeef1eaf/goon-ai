@@ -29,6 +29,8 @@ pub struct Assets {
     pub image: Option<Vec<Asset>>,
     pub video: Option<Vec<Asset>>,
     pub audio: Option<Vec<Asset>>,
+    pub hypno: Option<Vec<Asset>>,
+    pub wallpaper: Option<Vec<Asset>>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
