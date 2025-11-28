@@ -19,10 +19,12 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            python3 python3-distutils python3-venv \
+            python3 python3-venv \
             git curl clang g++ make ninja-build pkg-config lld \
             build-essential libglib2.0-dev ca-certificates
           sudo ln -sf /usr/bin/python3 /usr/bin/python
+          python3 -m pip install --upgrade pip
+          python3 -m pip install setuptools
           git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git /tmp/depot_tools
           echo "/tmp/depot_tools" >> $GITHUB_PATH
       - name: Set up Rust
