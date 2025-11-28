@@ -1,3 +1,4 @@
+use crate::permissions::Permission;
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -14,7 +15,7 @@ pub struct PackConfig {
 pub struct PackMeta {
     pub name: String,
     pub version: String,
-    pub permissions: Vec<String>,
+    pub permissions: Vec<Permission>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]

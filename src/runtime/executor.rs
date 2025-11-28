@@ -1,4 +1,4 @@
-use crate::permissions::Permissions;
+use crate::permissions::PermissionChecker;
 use crate::runtime::GoonRuntime;
 use crate::typescript::TypeScriptCompiler;
 use anyhow::Result;
@@ -14,7 +14,7 @@ impl Executor {
         }
     }
 
-    pub async fn execute(&self, ts_code: &str, permissions: Permissions) -> Result<()> {
+    pub async fn execute(&self, ts_code: &str, permissions: PermissionChecker) -> Result<()> {
         let js_code = self.compiler.compile(ts_code)?;
         let mut runtime = GoonRuntime::new(permissions);
         runtime.execute_script(&js_code).await?;
@@ -25,13 +25,13 @@ impl Executor {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::permissions::{PermissionSet, PermissionChecker};
 
     #[tokio::test]
     async fn test_executor_run() {
         let executor = Executor::new();
-        let permissions = Permissions {
-            allowed: vec!["all".to_string()],
-        };
+        let set = PermissionSet::new();
+        let permissions = PermissionChecker::new(set);
         let code = r#"
             goon.system.log("Executor test");
         "#;
@@ -42,7 +42,8 @@ mod tests {
     #[tokio::test]
     async fn test_executor_compile_error() {
         let executor = Executor::new();
-        let permissions = Permissions { allowed: vec![] };
+        let set = PermissionSet::new();
+        let permissions = PermissionChecker::new(set);
         let code = "const x: number = ;"; // Invalid syntax
         let result = executor.execute(code, permissions).await;
         assert!(result.is_err());

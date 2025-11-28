@@ -1,3 +1,4 @@
+use crate::permissions::Permission;
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -26,7 +27,7 @@ pub struct LLMSettings {
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct RuntimeSettings {
     pub popups: Popups,
-    pub permissions: Vec<String>,
+    pub permissions: Vec<Permission>,
     pub pack: PackSettings,
 }
 
@@ -132,6 +133,6 @@ runtime:
         let settings = Settings::from_str(yaml).unwrap();
         assert_eq!(settings.user.name, "Test User");
         assert_eq!(settings.runtime.pack.current, "Test Pack");
-        assert_eq!(settings.runtime.permissions, vec!["image"]);
+        assert_eq!(settings.runtime.permissions, vec![Permission::Image]);
     }
 }

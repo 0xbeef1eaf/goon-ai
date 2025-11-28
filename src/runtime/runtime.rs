@@ -1,4 +1,4 @@
-use crate::permissions::Permissions;
+use crate::permissions::PermissionChecker;
 use crate::sdk;
 use crate::sdk::{
     audio::goon_audio, hypno::goon_hypno, image::goon_image, prompt::goon_prompt,
@@ -14,7 +14,7 @@ pub struct GoonRuntime {
 }
 
 impl GoonRuntime {
-    pub fn new(permissions: Permissions) -> Self {
+    pub fn new(permissions: PermissionChecker) -> Self {
         let mut js_runtime = JsRuntime::new(RuntimeOptions {
             extensions: vec![
                 goon_system::init(),
@@ -75,13 +75,13 @@ impl GoonRuntime {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::permissions::Permissions;
+    use crate::permissions::{Permission, PermissionChecker, PermissionSet};
 
     #[tokio::test]
     async fn test_runtime_execution() {
-        let permissions = Permissions {
-            allowed: vec!["all".to_string()],
-        };
+        let mut set = PermissionSet::new();
+        set.add(Permission::Image);
+        let permissions = PermissionChecker::new(set);
         let mut runtime = GoonRuntime::new(permissions);
 
         let code = r#"
@@ -96,7 +96,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_permission_denied() {
-        let permissions = Permissions { allowed: vec![] }; // No permissions
+        let set = PermissionSet::new(); // No permissions
+        let permissions = PermissionChecker::new(set);
         let mut runtime = GoonRuntime::new(permissions);
 
         let code = r#"
