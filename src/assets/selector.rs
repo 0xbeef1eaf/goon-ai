@@ -29,6 +29,16 @@ impl<'a> AssetSelector<'a> {
         self.select_from(&self.registry.audio, mood, tags)
     }
 
+    #[allow(dead_code)]
+    pub fn select_hypno(&self, mood: &Mood, tags: &[String]) -> Option<&Asset> {
+        self.select_from(&self.registry.hypnos, mood, tags)
+    }
+
+    #[allow(dead_code)]
+    pub fn select_wallpaper(&self, mood: &Mood, tags: &[String]) -> Option<&Asset> {
+        self.select_from(&self.registry.wallpapers, mood, tags)
+    }
+
     fn select_from(&self, assets: &'a [Asset], mood: &Mood, tags: &[String]) -> Option<&'a Asset> {
         let mood_tags = &mood.tags;
 
@@ -72,16 +82,22 @@ mod tests {
         registry.add(Asset::Image(ImageAsset {
             path: PathBuf::from("img1.jpg"),
             tags: vec!["nature".to_string(), "calm".to_string()],
+            width: 100,
+            height: 100,
         }));
 
         registry.add(Asset::Image(ImageAsset {
             path: PathBuf::from("img2.jpg"),
             tags: vec!["city".to_string(), "busy".to_string()],
+            width: 100,
+            height: 100,
         }));
 
         registry.add(Asset::Image(ImageAsset {
             path: PathBuf::from("img3.jpg"),
             tags: vec!["nature".to_string(), "busy".to_string()],
+            width: 100,
+            height: 100,
         }));
 
         registry
@@ -162,6 +178,8 @@ mod tests {
             path: PathBuf::from("vid1.mp4"),
             tags: vec!["action".to_string()],
             duration: None,
+            width: 1920,
+            height: 1080,
         }));
 
         let selector = AssetSelector::new(&registry);
@@ -202,6 +220,55 @@ mod tests {
             assert_eq!(a.path.to_str().unwrap(), "audio1.mp3");
         } else {
             panic!("Expected AudioAsset");
+        }
+    }
+
+    #[test]
+    fn test_select_hypno() {
+        let mut registry = AssetRegistry::new();
+        registry.add(Asset::Hypno(crate::assets::types::HypnoAsset {
+            path: PathBuf::from("hypno1.gif"),
+            tags: vec!["spiral".to_string()],
+            is_animated: true,
+        }));
+
+        let selector = AssetSelector::new(&registry);
+        let mood = Mood {
+            name: "Trance".to_string(),
+            description: "".to_string(),
+            tags: vec!["spiral".to_string()],
+        };
+
+        let asset = selector.select_hypno(&mood, &[]);
+        assert!(asset.is_some());
+        if let Asset::Hypno(h) = asset.unwrap() {
+            assert_eq!(h.path.to_str().unwrap(), "hypno1.gif");
+        } else {
+            panic!("Expected HypnoAsset");
+        }
+    }
+
+    #[test]
+    fn test_select_wallpaper() {
+        let mut registry = AssetRegistry::new();
+        registry.add(Asset::Wallpaper(crate::assets::types::WallpaperAsset {
+            path: PathBuf::from("wall1.jpg"),
+            tags: vec!["scenic".to_string()],
+        }));
+
+        let selector = AssetSelector::new(&registry);
+        let mood = Mood {
+            name: "Scenic".to_string(),
+            description: "".to_string(),
+            tags: vec!["scenic".to_string()],
+        };
+
+        let asset = selector.select_wallpaper(&mood, &[]);
+        assert!(asset.is_some());
+        if let Asset::Wallpaper(w) = asset.unwrap() {
+            assert_eq!(w.path.to_str().unwrap(), "wall1.jpg");
+        } else {
+            panic!("Expected WallpaperAsset");
         }
     }
 }

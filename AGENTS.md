@@ -154,3 +154,8 @@ Assets are organized into "Packs" and filtered by "Moods".
 *   **No Filesystem Access**: The LLM cannot read/write arbitrary files.
 *   **Explicit Permissions**: Capabilities must be explicitly granted by the user.
 *   **Asset Validation**: Assets are validated upon pack loading.
+
+## Tool Use
+
+When interacting with package management files, always utilise the tool to ensure the best results.
+Editing Cargo.toml or Cargo.lock directly is bad behaviour, always use command line `cargo ...`
