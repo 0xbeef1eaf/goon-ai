@@ -103,11 +103,11 @@ impl PermissionSet {
         }
         new_set
     }
-    
+
     pub fn is_empty(&self) -> bool {
         self.permissions.is_empty()
     }
-    
+
     pub fn len(&self) -> usize {
         self.permissions.len()
     }
@@ -133,10 +133,16 @@ mod tests {
         assert_eq!(Permission::from_str("VIDEO").unwrap(), Permission::Video);
         assert_eq!(Permission::from_str("Audio").unwrap(), Permission::Audio);
         assert_eq!(Permission::from_str("hypno").unwrap(), Permission::Hypno);
-        assert_eq!(Permission::from_str("wallpaper").unwrap(), Permission::Wallpaper);
+        assert_eq!(
+            Permission::from_str("wallpaper").unwrap(),
+            Permission::Wallpaper
+        );
         assert_eq!(Permission::from_str("prompt").unwrap(), Permission::Prompt);
-        assert_eq!(Permission::from_str("website").unwrap(), Permission::Website);
-        
+        assert_eq!(
+            Permission::from_str("website").unwrap(),
+            Permission::Website
+        );
+
         assert!(Permission::from_str("unknown").is_err());
     }
 
@@ -189,7 +195,7 @@ mod tests {
     fn test_permission_set_is_empty() {
         let set = PermissionSet::new();
         assert!(set.is_empty());
-        
+
         let mut set = PermissionSet::new();
         set.add(Permission::Image);
         assert!(!set.is_empty());

@@ -8,8 +8,10 @@ pub fn check_permission(state: &mut OpState, permission_str: &str) -> Result<(),
     let checker = state.borrow::<PermissionChecker>();
     let permission = Permission::from_str(permission_str)
         .map_err(|e| AnyError::msg(format!("Invalid permission: {}", e)))?;
-    
-    checker.check(permission).map_err(|e| AnyError::msg(e).into())
+
+    checker
+        .check(permission)
+        .map_err(|e| AnyError::msg(e).into())
 }
 
 #[cfg(test)]
@@ -23,11 +25,11 @@ mod tests {
         {
             let op_state = runtime.op_state();
             let mut state = op_state.borrow_mut();
-            
+
             let mut set = PermissionSet::new();
             set.add(Permission::Image);
             state.put(PermissionChecker::new(set));
-            
+
             assert!(check_permission(&mut state, "image").is_ok());
             assert!(check_permission(&mut state, "video").is_err());
             assert!(check_permission(&mut state, "invalid").is_err());

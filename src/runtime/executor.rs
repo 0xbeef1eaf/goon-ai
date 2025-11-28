@@ -25,7 +25,7 @@ impl Executor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::permissions::{PermissionSet, PermissionChecker};
+    use crate::permissions::{PermissionChecker, PermissionSet};
 
     #[tokio::test]
     async fn test_executor_run() {
