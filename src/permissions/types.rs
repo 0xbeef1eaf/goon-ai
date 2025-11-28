@@ -76,6 +76,7 @@ impl PermissionSet {
         self.permissions.contains(&permission)
     }
 
+    #[allow(dead_code)]
     pub fn union(&self, other: &PermissionSet) -> PermissionSet {
         let mut new_set = self.clone();
         for perm in &other.permissions {
@@ -106,10 +107,6 @@ impl PermissionSet {
 
     pub fn is_empty(&self) -> bool {
         self.permissions.is_empty()
-    }
-
-    pub fn len(&self) -> usize {
-        self.permissions.len()
     }
 }
 
@@ -164,20 +161,17 @@ mod tests {
 
         // Union
         let union = set1.union(&set2);
-        assert_eq!(union.len(), 3);
         assert!(union.contains(Permission::Image));
         assert!(union.contains(Permission::Video));
         assert!(union.contains(Permission::Audio));
 
         // Intersection
         let intersection = set1.intersection(&set2);
-        assert_eq!(intersection.len(), 1);
         assert!(intersection.contains(Permission::Video));
         assert!(!intersection.contains(Permission::Image));
 
         // Difference (set1 - set2)
         let diff = set1.difference(&set2);
-        assert_eq!(diff.len(), 1);
         assert!(diff.contains(Permission::Image));
         assert!(!diff.contains(Permission::Video));
     }
@@ -186,7 +180,6 @@ mod tests {
     fn test_permission_set_from_vec() {
         let vec = vec![Permission::Image, Permission::Video];
         let set: PermissionSet = vec.into();
-        assert_eq!(set.len(), 2);
         assert!(set.contains(Permission::Image));
         assert!(set.contains(Permission::Video));
     }

@@ -1,4 +1,4 @@
-use super::types::{Permission, PermissionSet};
+use super::types::PermissionSet;
 
 pub struct PermissionResolver;
 
@@ -24,6 +24,7 @@ impl PermissionResolver {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::permissions::Permission;
 
     #[test]
     fn test_resolve_intersection() {

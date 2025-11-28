@@ -7,6 +7,7 @@ pub struct App {
     pub settings: Settings,
     #[allow(dead_code)]
     pub pack_config: PackConfig,
+    #[allow(dead_code)]
     pub permissions: PermissionChecker,
 }
 
