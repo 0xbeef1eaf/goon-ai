@@ -1,6 +1,6 @@
-use crate::typescript::TypeScriptCompiler;
-use crate::runtime::GoonRuntime;
 use crate::permissions::Permissions;
+use crate::runtime::GoonRuntime;
+use crate::typescript::TypeScriptCompiler;
 use anyhow::Result;
 
 pub struct Executor {

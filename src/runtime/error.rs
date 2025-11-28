@@ -20,7 +20,9 @@ impl JsErrorClass for OpError {
     fn get_message(&self) -> Cow<'static, str> {
         self.0.to_string().into()
     }
-    fn get_additional_properties(&self) -> Box<dyn Iterator<Item = (Cow<'static, str>, deno_error::PropertyValue)> + 'static> {
+    fn get_additional_properties(
+        &self,
+    ) -> Box<dyn Iterator<Item = (Cow<'static, str>, deno_error::PropertyValue)> + 'static> {
         Box::new(std::iter::empty())
     }
     fn get_ref(&self) -> &(dyn std::error::Error + Send + Sync + 'static) {

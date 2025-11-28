@@ -1,13 +1,13 @@
 #![allow(dead_code)]
 
-pub mod image;
-pub mod video;
 pub mod audio;
 pub mod hypno;
-pub mod wallpaper;
+pub mod image;
 pub mod prompt;
-pub mod website;
 pub mod system;
+pub mod video;
+pub mod wallpaper;
+pub mod website;
 
 pub const INIT_SOURCE: &str = include_str!("js/init.ts");
 
@@ -27,13 +27,14 @@ pub fn get_all_typescript_sources() -> Vec<&'static str> {
 
 pub fn generate_typescript_definitions(allowed_modules: &[String]) -> String {
     let mut definitions = String::new();
-    
+
     definitions.push_str("/** GoonAI SDK */\n");
     definitions.push_str("type WindowHandle = number;\n");
     definitions.push_str("declare namespace goon {\n");
-    
+
     if allowed_modules.contains(&"image".to_string()) {
-         definitions.push_str(r#"
+        definitions.push_str(
+            r#"
     namespace image {
         /**
          * Display an image on screen
@@ -50,13 +51,14 @@ pub fn generate_typescript_definitions(allowed_modules: &[String]) -> String {
             }
         ): Promise<WindowHandle>;
     }
-"#);
+"#,
+        );
     }
 
     // Add other modules...
-    
+
     definitions.push_str("}\n");
-    
+
     definitions
 }
 
