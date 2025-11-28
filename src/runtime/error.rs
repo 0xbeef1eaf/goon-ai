@@ -35,3 +35,24 @@ impl From<AnyError> for OpError {
         OpError(err)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use anyhow::anyhow;
+
+    #[test]
+    fn test_op_error_display() {
+        let err = anyhow!("Something went wrong");
+        let op_err = OpError::from(err);
+        assert_eq!(format!("{}", op_err), "Something went wrong");
+    }
+
+    #[test]
+    fn test_op_error_js_class() {
+        let err = anyhow!("Error");
+        let op_err = OpError::from(err);
+        assert_eq!(op_err.get_class(), "Error");
+        assert_eq!(op_err.get_message(), "Error");
+    }
+}

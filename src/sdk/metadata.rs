@@ -59,3 +59,30 @@ pub fn get_modules() -> Vec<SdkModule> {
         },
     ]
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_get_modules_not_empty() {
+        let modules = get_modules();
+        assert!(!modules.is_empty());
+    }
+
+    #[test]
+    fn test_modules_have_templates() {
+        let modules = get_modules();
+        for module in modules {
+            assert!(!module.template.is_empty());
+            assert!(!module.name.is_empty());
+        }
+    }
+
+    #[test]
+    fn test_specific_module_exists() {
+        let modules = get_modules();
+        assert!(modules.iter().any(|m| m.name == "image"));
+        assert!(modules.iter().any(|m| m.name == "types"));
+    }
+}

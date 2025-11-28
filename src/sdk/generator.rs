@@ -24,3 +24,30 @@ pub fn generate_definitions(allowed_modules: &[String]) -> String {
 
     definitions
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_generate_definitions_includes_always_modules() {
+        let defs = generate_definitions(&[]);
+        assert!(defs.contains("// Module: types"));
+        assert!(defs.contains("// Module: pack"));
+    }
+
+    #[test]
+    fn test_generate_definitions_includes_permitted_modules() {
+        let defs = generate_definitions(&["image".to_string()]);
+        assert!(defs.contains("// Module: image"));
+        assert!(!defs.contains("// Module: video"));
+    }
+
+    #[test]
+    fn test_generate_definitions_includes_all_modules() {
+        let defs = generate_definitions(&["all".to_string()]);
+        assert!(defs.contains("// Module: image"));
+        assert!(defs.contains("// Module: video"));
+        assert!(defs.contains("// Module: audio"));
+    }
+}
