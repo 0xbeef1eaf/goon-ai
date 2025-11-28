@@ -1,5 +1,7 @@
 #![allow(dead_code)]
 
+use crate::permissions::{Permission, PermissionChecker};
+
 pub mod audio;
 pub mod hypno;
 pub mod image;
@@ -33,9 +35,37 @@ pub fn generate_typescript_definitions(allowed_modules: &[String]) -> String {
     generator::generate_definitions(allowed_modules)
 }
 
+pub fn generate_definitions_for_permissions(permissions: &PermissionChecker) -> String {
+    let mut allowed_modules = Vec::new();
+    if permissions.has_permission(Permission::Image) {
+        allowed_modules.push("image".to_string());
+    }
+    if permissions.has_permission(Permission::Video) {
+        allowed_modules.push("video".to_string());
+    }
+    if permissions.has_permission(Permission::Audio) {
+        allowed_modules.push("audio".to_string());
+    }
+    if permissions.has_permission(Permission::Hypno) {
+        allowed_modules.push("hypno".to_string());
+    }
+    if permissions.has_permission(Permission::Wallpaper) {
+        allowed_modules.push("wallpaper".to_string());
+    }
+    if permissions.has_permission(Permission::Prompt) {
+        allowed_modules.push("prompt".to_string());
+    }
+    if permissions.has_permission(Permission::Website) {
+        allowed_modules.push("website".to_string());
+    }
+
+    generator::generate_definitions(&allowed_modules)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::permissions::{Permission, PermissionChecker, PermissionSet};
 
     #[test]
     fn test_generate_definitions_empty() {
@@ -82,6 +112,17 @@ mod tests {
         let defs = generate_typescript_definitions(&modules);
         assert!(defs.contains("class image"));
         assert!(defs.contains("class audio"));
+        assert!(!defs.contains("class video"));
+    }
+
+    #[test]
+    fn test_generate_definitions_for_permissions() {
+        let mut set = PermissionSet::new();
+        set.add(Permission::Image);
+        let checker = PermissionChecker::new(set);
+
+        let defs = generate_definitions_for_permissions(&checker);
+        assert!(defs.contains("class image"));
         assert!(!defs.contains("class video"));
     }
 }

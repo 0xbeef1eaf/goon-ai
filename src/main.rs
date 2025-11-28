@@ -1,14 +1,5 @@
-mod assets;
-mod config;
-mod core;
-mod llm;
-mod permissions;
-mod runtime;
-mod sdk;
-mod typescript;
-
-use crate::core::app::App;
 use anyhow::Result;
+use goon_ai::core::app::App;
 
 fn main() -> Result<()> {
     // Initialize logging (simple print for now, can be enhanced later)

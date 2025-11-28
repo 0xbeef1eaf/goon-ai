@@ -1,11 +1,14 @@
 use crate::config::pack::PackConfig;
 use crate::config::settings::Settings;
+use crate::permissions::{PermissionChecker, PermissionResolver, PermissionSet};
 use anyhow::Result;
 
 pub struct App {
     pub settings: Settings,
     #[allow(dead_code)]
     pub pack_config: PackConfig,
+    #[allow(dead_code)]
+    pub permissions: PermissionChecker,
 }
 
 impl App {
@@ -22,11 +25,26 @@ impl App {
             pack_config.meta.name, pack_config.meta.version
         );
 
-        // 3. TODO: Compute Permissions (Issue #8)
+        // 3. Compute Permissions
+        let user_perms: PermissionSet = settings.runtime.permissions.clone().into();
+        let pack_perms: PermissionSet = pack_config.meta.permissions.clone().into();
+
+        let active_perms = PermissionResolver::resolve(&pack_perms, &user_perms);
+        let permissions = PermissionChecker::new(active_perms);
+
+        // Check for missing permissions (optional logging)
+        let missing = PermissionResolver::find_missing(&pack_perms, &user_perms);
+        if !missing.is_empty() {
+            println!(
+                "Warning: Pack requested permissions that are not granted: {:?}",
+                missing
+            );
+        }
 
         Ok(Self {
             settings,
             pack_config,
+            permissions,
         })
     }
 

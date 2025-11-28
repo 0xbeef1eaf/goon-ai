@@ -1,3 +1,4 @@
+use crate::permissions::Permission;
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -26,7 +27,7 @@ pub struct LLMSettings {
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct RuntimeSettings {
     pub popups: Popups,
-    pub permissions: Vec<String>,
+    pub permissions: Vec<Permission>,
     pub pack: PackSettings,
 }
 
@@ -84,7 +85,7 @@ impl Settings {
     }
 
     #[allow(dead_code)]
-    pub fn from_str(content: &str) -> Result<Self> {
+    pub fn parse(content: &str) -> Result<Self> {
         let settings: Settings =
             serde_yaml::from_str(content).context("Failed to parse settings")?;
         Ok(settings)
@@ -129,9 +130,9 @@ runtime:
     current: Test Pack
     mood: default
 "#;
-        let settings = Settings::from_str(yaml).unwrap();
+        let settings = Settings::parse(yaml).unwrap();
         assert_eq!(settings.user.name, "Test User");
         assert_eq!(settings.runtime.pack.current, "Test Pack");
-        assert_eq!(settings.runtime.permissions, vec!["image"]);
+        assert_eq!(settings.runtime.permissions, vec![Permission::Image]);
     }
 }
