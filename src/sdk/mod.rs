@@ -9,6 +9,10 @@ pub mod video;
 pub mod wallpaper;
 pub mod website;
 
+pub mod generator;
+pub mod metadata;
+pub mod templates;
+
 pub const INIT_SOURCE: &str = include_str!("js/init.ts");
 
 pub fn get_all_typescript_sources() -> Vec<&'static str> {
@@ -26,40 +30,7 @@ pub fn get_all_typescript_sources() -> Vec<&'static str> {
 }
 
 pub fn generate_typescript_definitions(allowed_modules: &[String]) -> String {
-    let mut definitions = String::new();
-
-    definitions.push_str("/** GoonAI SDK */\n");
-    definitions.push_str("type WindowHandle = number;\n");
-    definitions.push_str("declare namespace goon {\n");
-
-    if allowed_modules.contains(&"image".to_string()) {
-        definitions.push_str(
-            r#"
-    namespace image {
-        /**
-         * Display an image on screen
-         * @param path - Asset path or tag query
-         * @param options - Display options
-         */
-        function show(
-            path: string,
-            options?: {
-              duration?: number;
-              opacity?: number;
-              position?: { x: number; y: number };
-              alwaysOnTop?: boolean;
-            }
-        ): Promise<WindowHandle>;
-    }
-"#,
-        );
-    }
-
-    // Add other modules...
-
-    definitions.push_str("}\n");
-
-    definitions
+    generator::generate_definitions(allowed_modules)
 }
 
 #[cfg(test)]
@@ -71,16 +42,46 @@ mod tests {
         let modules = vec![];
         let defs = generate_typescript_definitions(&modules);
         assert!(defs.contains("/** GoonAI SDK */"));
-        assert!(defs.contains("type WindowHandle = number;"));
-        assert!(defs.contains("declare namespace goon {"));
-        assert!(!defs.contains("namespace image"));
+        assert!(defs.contains("interface WindowHandle")); // From types.ts (always included)
+        assert!(defs.contains("class pack")); // From pack.ts (always included)
+        assert!(!defs.contains("class image"));
     }
 
     #[test]
     fn test_generate_definitions_image() {
         let modules = vec!["image".to_string()];
         let defs = generate_typescript_definitions(&modules);
-        assert!(defs.contains("namespace image"));
-        assert!(defs.contains("function show"));
+        assert!(defs.contains("class image"));
+        assert!(defs.contains("static async show"));
+    }
+
+    #[test]
+    fn test_generate_definitions_video() {
+        let modules = vec!["video".to_string()];
+        let defs = generate_typescript_definitions(&modules);
+        assert!(defs.contains("class video"));
+        assert!(defs.contains("static async play"));
+        assert!(!defs.contains("class image"));
+    }
+
+    #[test]
+    fn test_generate_definitions_all() {
+        let modules = vec!["all".to_string()];
+        let defs = generate_typescript_definitions(&modules);
+        assert!(defs.contains("class image"));
+        assert!(defs.contains("class video"));
+        assert!(defs.contains("class audio"));
+        assert!(defs.contains("class textPrompt"));
+        assert!(defs.contains("class wallpaper"));
+        assert!(defs.contains("class website"));
+    }
+
+    #[test]
+    fn test_generate_definitions_multiple() {
+        let modules = vec!["image".to_string(), "audio".to_string()];
+        let defs = generate_typescript_definitions(&modules);
+        assert!(defs.contains("class image"));
+        assert!(defs.contains("class audio"));
+        assert!(!defs.contains("class video"));
     }
 }
