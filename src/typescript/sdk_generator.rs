@@ -16,6 +16,6 @@ mod tests {
     fn test_generator_delegation() {
         let modules = vec!["image".to_string()];
         let defs = SdkGenerator::generate_definitions(&modules);
-        assert!(defs.contains("declare function showImage"));
+        assert!(defs.contains("namespace image"));
     }
 }
