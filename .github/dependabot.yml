@@ -9,4 +9,12 @@ updates:
       separator: "-"
     labels:
       - "dependencies"
-      - "rust"
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    pull-request-branch-name:
+      separator: "-"
+    labels:
+      - "dependencies"

@@ -2,12 +2,13 @@ name: CI
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 env:
   CARGO_TERM_COLOR: always
+  V8_FROM_SOURCE: "0" # Force using prebuilt V8 binaries, as by default on CI it tries to build from source
 
 jobs:
   test:
@@ -47,4 +48,3 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - name: Linting
         run: cargo clippy -- -D warnings
-
