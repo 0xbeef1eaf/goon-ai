@@ -1,11 +1,11 @@
+use super::window_manager::{WindowHandle, WindowManager, WindowMessage, WindowOptions};
+use anyhow::Result;
+use std::sync::mpsc::Sender;
+use std::sync::{Arc, Mutex};
 use winit::application::ApplicationHandler;
 use winit::event::WindowEvent;
 use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop, EventLoopProxy};
 use winit::window::WindowId;
-use std::sync::{Arc, Mutex};
-use std::sync::mpsc::Sender;
-use anyhow::Result;
-use super::window_manager::{WindowManager, WindowOptions, WindowHandle, WindowMessage};
 
 pub enum GuiCommand {
     CreateWindow(WindowOptions, Sender<Result<WindowHandle>>),
@@ -18,9 +18,7 @@ pub struct App {
 
 impl App {
     pub fn new(window_manager: Arc<Mutex<WindowManager>>) -> Self {
-        Self {
-            window_manager,
-        }
+        Self { window_manager }
     }
 }
 
@@ -35,7 +33,7 @@ impl ApplicationHandler<GuiCommand> for App {
                 let mut wm = self.window_manager.lock().unwrap();
                 let result = wm.create_window(options, event_loop);
                 let _ = reply_sender.send(result);
-            },
+            }
             GuiCommand::CloseWindow(handle) => {
                 let mut wm = self.window_manager.lock().unwrap();
                 wm.close_window(handle);
@@ -64,7 +62,7 @@ impl ApplicationHandler<GuiCommand> for App {
                 if let Some(handle) = wm.get_handle_from_winit(window_id) {
                     wm.push_message(WindowMessage::CloseRequested(handle));
                 }
-            },
+            }
             WindowEvent::Resized(physical_size) => {
                 let mut wm = self.window_manager.lock().unwrap();
                 if let Some(handle) = wm.get_handle_from_winit(window_id) {
@@ -73,9 +71,13 @@ impl ApplicationHandler<GuiCommand> for App {
                             renderer.resize(physical_size);
                         }
                     }
-                    wm.push_message(WindowMessage::Resized(handle, physical_size.width, physical_size.height));
+                    wm.push_message(WindowMessage::Resized(
+                        handle,
+                        physical_size.width,
+                        physical_size.height,
+                    ));
                 }
-            },
+            }
             WindowEvent::RedrawRequested => {
                 let mut wm = self.window_manager.lock().unwrap();
                 if let Some(handle) = wm.get_handle_from_winit(window_id) {
@@ -83,33 +85,35 @@ impl ApplicationHandler<GuiCommand> for App {
                         let opacity = window.get_render_opacity();
                         if let Some(renderer) = &mut window.renderer {
                             match renderer.render(opacity) {
-                                Ok(_) => {},
-                                Err(wgpu::SurfaceError::Lost) => renderer.resize(window.winit_window.inner_size()),
+                                Ok(_) => {}
+                                Err(wgpu::SurfaceError::Lost) => {
+                                    renderer.resize(window.winit_window.inner_size())
+                                }
                                 Err(wgpu::SurfaceError::OutOfMemory) => event_loop.exit(),
                                 Err(e) => eprintln!("{:?}", e),
                             }
                         }
                     }
                 }
-            },
+            }
             WindowEvent::KeyboardInput { event, .. } => {
                 let mut wm = self.window_manager.lock().unwrap();
                 if let Some(handle) = wm.get_handle_from_winit(window_id) {
                     wm.push_message(WindowMessage::KeyboardInput(handle, event));
                 }
-            },
+            }
             WindowEvent::CursorMoved { position, .. } => {
                 let mut wm = self.window_manager.lock().unwrap();
                 if let Some(handle) = wm.get_handle_from_winit(window_id) {
                     wm.push_message(WindowMessage::CursorMoved(handle, position.x, position.y));
                 }
-            },
+            }
             WindowEvent::MouseInput { state, button, .. } => {
                 let mut wm = self.window_manager.lock().unwrap();
                 if let Some(handle) = wm.get_handle_from_winit(window_id) {
                     wm.push_message(WindowMessage::MouseInput(handle, button, state));
                 }
-            },
+            }
             _ => (),
         }
     }
@@ -121,7 +125,10 @@ pub fn create_event_loop() -> Result<(EventLoop<GuiCommand>, EventLoopProxy<GuiC
     Ok((event_loop, proxy))
 }
 
-pub fn run_event_loop(event_loop: EventLoop<GuiCommand>, window_manager: Arc<Mutex<WindowManager>>) -> Result<()> {
+pub fn run_event_loop(
+    event_loop: EventLoop<GuiCommand>,
+    window_manager: Arc<Mutex<WindowManager>>,
+) -> Result<()> {
     event_loop.set_control_flow(ControlFlow::Wait);
     let mut app = App::new(window_manager);
     event_loop.run_app(&mut app)?;

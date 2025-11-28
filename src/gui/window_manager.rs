@@ -1,10 +1,10 @@
-use std::collections::HashMap;
-use uuid::Uuid;
+use super::event_loop::GuiCommand;
 use anyhow::Result;
+use std::collections::HashMap;
+use std::sync::mpsc::channel;
+use uuid::Uuid;
 use winit::event_loop::{ActiveEventLoop, EventLoopProxy};
 use winit::window::WindowId;
-use std::sync::mpsc::channel;
-use super::event_loop::GuiCommand;
 
 use super::window::Window;
 
@@ -66,13 +66,16 @@ impl GuiController {
 
     pub fn create_window(&self, options: WindowOptions) -> Result<WindowHandle> {
         let (tx, rx) = channel();
-        self.proxy.send_event(GuiCommand::CreateWindow(options, tx))
+        self.proxy
+            .send_event(GuiCommand::CreateWindow(options, tx))
             .map_err(|_| anyhow::anyhow!("Event loop closed"))?;
-        rx.recv().map_err(|_| anyhow::anyhow!("Failed to receive response"))?
+        rx.recv()
+            .map_err(|_| anyhow::anyhow!("Failed to receive response"))?
     }
 
     pub fn close_window(&self, handle: WindowHandle) -> Result<()> {
-        self.proxy.send_event(GuiCommand::CloseWindow(handle))
+        self.proxy
+            .send_event(GuiCommand::CloseWindow(handle))
             .map_err(|_| anyhow::anyhow!("Event loop closed"))?;
         Ok(())
     }
@@ -95,20 +98,24 @@ impl WindowManager {
         }
     }
 
-    pub fn create_window(&mut self, options: WindowOptions, event_loop: &ActiveEventLoop) -> Result<WindowHandle> {
+    pub fn create_window(
+        &mut self,
+        options: WindowOptions,
+        event_loop: &ActiveEventLoop,
+    ) -> Result<WindowHandle> {
         let id = Uuid::new_v4();
         let handle = WindowHandle(id);
-        
+
         if let Some(timeout) = options.timeout {
             self.deadlines.push((Instant::now() + timeout, handle));
         }
 
         let window = Window::new(options, event_loop)?;
         let window_id = window.winit_window.id();
-        
+
         self.windows.insert(handle, window);
         self.winit_to_handle.insert(window_id, handle);
-        
+
         Ok(handle)
     }
 
@@ -119,11 +126,11 @@ impl WindowManager {
         // Remove from deadlines
         self.deadlines.retain(|(_, h)| *h != handle);
     }
-    
+
     pub fn check_timeouts(&mut self) -> Option<Instant> {
         let now = Instant::now();
         let mut expired = Vec::new();
-        
+
         // Find expired windows
         self.deadlines.retain(|(deadline, handle)| {
             if *deadline <= now {
@@ -133,20 +140,20 @@ impl WindowManager {
                 true
             }
         });
-        
+
         // Close expired windows
         for handle in expired {
             self.close_window(handle);
         }
-        
+
         // Return next deadline
         self.deadlines.iter().map(|(d, _)| *d).min()
     }
-    
+
     pub fn get_window(&self, handle: WindowHandle) -> Option<&Window> {
         self.windows.get(&handle)
     }
-    
+
     pub fn get_window_mut(&mut self, handle: WindowHandle) -> Option<&mut Window> {
         self.windows.get_mut(&handle)
     }
@@ -165,9 +172,10 @@ impl WindowManager {
 
     #[cfg(test)]
     pub fn add_test_deadline(&mut self, handle: WindowHandle, timeout: Duration) {
-        self.deadlines.push((std::time::Instant::now() + timeout, handle));
+        self.deadlines
+            .push((std::time::Instant::now() + timeout, handle));
     }
-    
+
     #[cfg(test)]
     pub fn get_window_count(&self) -> usize {
         self.windows.len()

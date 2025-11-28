@@ -1,10 +1,10 @@
-use anyhow::Result;
-use winit::window::{Window as WinitWindow, WindowAttributes};
-use winit::event_loop::ActiveEventLoop;
-use super::window_manager::WindowOptions;
 use super::renderer::Renderer;
-use std::sync::Arc;
+use super::window_manager::WindowOptions;
+use anyhow::Result;
 use raw_window_handle::{HasWindowHandle, RawWindowHandle};
+use std::sync::Arc;
+use winit::event_loop::ActiveEventLoop;
+use winit::window::{Window as WinitWindow, WindowAttributes};
 
 pub struct Window {
     pub winit_window: Arc<WinitWindow>,
@@ -27,17 +27,17 @@ impl Window {
         if let Some(size) = options.size {
             attributes = attributes.with_inner_size(winit::dpi::LogicalSize::new(size.0, size.1));
         }
-        
+
         if let Some(pos) = options.position {
-             attributes = attributes.with_position(winit::dpi::LogicalPosition::new(pos.0, pos.1));
+            attributes = attributes.with_position(winit::dpi::LogicalPosition::new(pos.0, pos.1));
         }
-        
+
         if options.always_on_top {
-             attributes = attributes.with_window_level(winit::window::WindowLevel::AlwaysOnTop);
+            attributes = attributes.with_window_level(winit::window::WindowLevel::AlwaysOnTop);
         }
 
         let winit_window = Arc::new(event_loop.create_window(attributes)?);
-        
+
         Ok(Self {
             winit_window,
             renderer: None,
@@ -61,7 +61,9 @@ impl Window {
     }
 
     pub fn set_click_through(&self, click_through: bool) -> Result<()> {
-        self.winit_window.set_cursor_hittest(!click_through).map_err(|e| anyhow::anyhow!(e))
+        self.winit_window
+            .set_cursor_hittest(!click_through)
+            .map_err(|e| anyhow::anyhow!(e))
     }
 
     pub fn set_opacity(&mut self, opacity: f32) {
@@ -74,11 +76,11 @@ impl Window {
 
         #[cfg(target_os = "windows")]
         if let RawWindowHandle::Win32(handle) = handle {
-            use windows_sys::Win32::UI::WindowsAndMessaging::{
-                GetWindowLongPtrW, SetWindowLongPtrW, SetLayeredWindowAttributes,
-                GWL_EXSTYLE, WS_EX_LAYERED, LWA_ALPHA,
-            };
             use windows_sys::Win32::Foundation::HWND;
+            use windows_sys::Win32::UI::WindowsAndMessaging::{
+                GWL_EXSTYLE, GetWindowLongPtrW, LWA_ALPHA, SetLayeredWindowAttributes,
+                SetWindowLongPtrW, WS_EX_LAYERED,
+            };
 
             let hwnd = handle.hwnd.get() as HWND;
             unsafe {
@@ -105,17 +107,23 @@ impl Window {
         match handle {
             RawWindowHandle::Xlib(handle) => {
                 use x11rb::connection::Connection;
-                use x11rb::protocol::xproto::{AtomEnum, ConnectionExt as XProtoConnectionExt, PropMode};
+                use x11rb::protocol::xproto::{
+                    AtomEnum, ConnectionExt as XProtoConnectionExt, PropMode,
+                };
                 use x11rb::wrapper::ConnectionExt;
-                
+
                 if let Ok((conn, _)) = x11rb::connect(None) {
                     let window_id = handle.window as u32;
                     let atom_name = b"_NET_WM_WINDOW_OPACITY";
-                    
-                    if let Some(reply) = conn.intern_atom(false, atom_name).ok().and_then(|c| c.reply().ok()) {
+
+                    if let Some(reply) = conn
+                        .intern_atom(false, atom_name)
+                        .ok()
+                        .and_then(|c| c.reply().ok())
+                    {
                         let atom = reply.atom;
                         let opacity_u32 = (opacity.clamp(0.0, 1.0) * 0xFFFFFFFFu32 as f32) as u32;
-                        
+
                         let _ = conn.change_property32(
                             PropMode::REPLACE,
                             window_id,
@@ -126,12 +134,12 @@ impl Window {
                         let _ = conn.flush();
                     }
                 }
-            },
+            }
             RawWindowHandle::Wayland(_) => {
                 // Wayland does not support server-side window opacity via standard protocols.
                 // Opacity must be handled during rendering by applying alpha to the content.
                 // The self.opacity field is updated and should be used by the renderer.
-            },
+            }
             _ => {}
         }
     }
