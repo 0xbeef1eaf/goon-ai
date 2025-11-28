@@ -29,7 +29,7 @@ impl PromptBuilder {
         if let Some(m) = pack_config.moods.iter().find(|m| m.name == mood) {
              prompt.push_str(&format!("{}\n\n", m.description));
         } else {
-             prompt.push_str("\n");
+             prompt.push('\n');
         }
 
         // 3. SDK Definitions
@@ -49,7 +49,7 @@ impl PromptBuilder {
         for msg in history.get_history() {
             prompt.push_str(&format!("{}: {}\n", msg.role, msg.content));
         }
-        prompt.push_str("\n");
+        prompt.push('\n');
 
         // 6. Task
         prompt.push_str("# Your Task\n");
