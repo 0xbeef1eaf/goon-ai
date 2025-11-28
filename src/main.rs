@@ -2,6 +2,7 @@ mod assets;
 mod config;
 mod core;
 mod permissions;
+mod llm;
 
 use crate::core::app::App;
 use anyhow::Result;
