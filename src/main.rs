@@ -2,8 +2,8 @@ mod config;
 mod core;
 mod permissions;
 
-use anyhow::Result;
 use crate::core::app::App;
+use anyhow::Result;
 
 fn main() -> Result<()> {
     // Initialize logging (simple print for now, can be enhanced later)

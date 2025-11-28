@@ -1,7 +1,7 @@
+use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
-use anyhow::{Context, Result};
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct PackConfig {
@@ -48,8 +48,10 @@ impl PackConfig {
         Ok(config)
     }
 
+    #[allow(dead_code)]
     pub fn from_str(content: &str) -> Result<Self> {
-        let config: PackConfig = serde_yaml::from_str(content).context("Failed to parse pack config")?;
+        let config: PackConfig =
+            serde_yaml::from_str(content).context("Failed to parse pack config")?;
         Ok(config)
     }
 }
@@ -80,6 +82,9 @@ assets:
         let config = PackConfig::from_str(yaml).unwrap();
         assert_eq!(config.meta.name, "Test Pack");
         assert_eq!(config.moods[0].name, "default");
-        assert_eq!(config.assets.image.as_ref().unwrap()[0].path, "image/test.jpg");
+        assert_eq!(
+            config.assets.image.as_ref().unwrap()[0].path,
+            "image/test.jpg"
+        );
     }
 }

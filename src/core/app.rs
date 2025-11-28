@@ -1,9 +1,10 @@
-use anyhow::Result;
-use crate::config::settings::Settings;
 use crate::config::pack::PackConfig;
+use crate::config::settings::Settings;
+use anyhow::Result;
 
 pub struct App {
     pub settings: Settings,
+    #[allow(dead_code)]
     pub pack_config: PackConfig,
 }
 
@@ -16,7 +17,10 @@ impl App {
         // 2. Load Pack Config
         let pack_name = &settings.runtime.pack.current;
         let pack_config = PackConfig::load(pack_name)?;
-        println!("Loaded pack: {} v{}", pack_config.meta.name, pack_config.meta.version);
+        println!(
+            "Loaded pack: {} v{}",
+            pack_config.meta.name, pack_config.meta.version
+        );
 
         // 3. TODO: Compute Permissions (Issue #8)
 

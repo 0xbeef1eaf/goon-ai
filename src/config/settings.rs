@@ -1,7 +1,7 @@
+use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
-use anyhow::{Context, Result};
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Settings {
@@ -78,12 +78,15 @@ impl Settings {
             }
         };
 
-        let settings: Settings = serde_yaml::from_str(&content).context("Failed to parse settings")?;
+        let settings: Settings =
+            serde_yaml::from_str(&content).context("Failed to parse settings")?;
         Ok(settings)
     }
 
+    #[allow(dead_code)]
     pub fn from_str(content: &str) -> Result<Self> {
-        let settings: Settings = serde_yaml::from_str(content).context("Failed to parse settings")?;
+        let settings: Settings =
+            serde_yaml::from_str(content).context("Failed to parse settings")?;
         Ok(settings)
     }
 }

@@ -1,4 +1,4 @@
 // Placeholder for permissions module
-pub mod permissions {
-    // Will be implemented in Issue #8
-}
+// pub mod types {
+//     // Will be implemented in Issue #8
+// }
