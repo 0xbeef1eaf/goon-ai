@@ -1,8 +1,8 @@
+use crate::assets::registry::AssetRegistry;
+use crate::assets::types::{Asset, AudioAsset, ImageAsset, VideoAsset};
+use crate::config::pack::PackConfig;
 use anyhow::Result;
 use std::path::Path;
-use crate::config::pack::PackConfig;
-use crate::assets::registry::AssetRegistry;
-use crate::assets::types::{Asset, ImageAsset, VideoAsset, AudioAsset};
 
 #[allow(dead_code)]
 pub struct AssetLoader;
@@ -52,7 +52,7 @@ impl AssetLoader {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::pack::{Assets, Asset as ConfigAsset, PackMeta};
+    use crate::config::pack::{Asset as ConfigAsset, Assets, PackMeta};
 
     #[test]
     fn test_load_assets() {

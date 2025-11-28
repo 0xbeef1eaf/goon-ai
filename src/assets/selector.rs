@@ -1,7 +1,7 @@
-use rand::seq::SliceRandom;
-use crate::assets::types::Asset;
 use crate::assets::registry::AssetRegistry;
+use crate::assets::types::Asset;
 use crate::config::pack::Mood;
+use rand::seq::SliceRandom;
 
 #[allow(dead_code)]
 pub struct AssetSelector<'a> {
@@ -31,19 +31,23 @@ impl<'a> AssetSelector<'a> {
 
     fn select_from(&self, assets: &'a [Asset], mood: &Mood, tags: &[String]) -> Option<&'a Asset> {
         let mood_tags = &mood.tags;
-        
-        // Filter assets that match mood tags AND requested tags
-        let candidates: Vec<&Asset> = assets.iter().filter(|asset| {
-            let asset_tags = asset.get_tags();
-            
-            // Check if asset has at least one tag from mood (or if mood has no tags)
-            let matches_mood = mood_tags.is_empty() || mood_tags.iter().any(|t| asset_tags.contains(t));
-            
-            // Check if asset has ALL requested tags
-            let matches_request = tags.iter().all(|t| asset_tags.contains(t));
 
-            matches_mood && matches_request
-        }).collect();
+        // Filter assets that match mood tags AND requested tags
+        let candidates: Vec<&Asset> = assets
+            .iter()
+            .filter(|asset| {
+                let asset_tags = asset.get_tags();
+
+                // Check if asset has at least one tag from mood (or if mood has no tags)
+                let matches_mood =
+                    mood_tags.is_empty() || mood_tags.iter().any(|t| asset_tags.contains(t));
+
+                // Check if asset has ALL requested tags
+                let matches_request = tags.iter().all(|t| asset_tags.contains(t));
+
+                matches_mood && matches_request
+            })
+            .collect();
 
         if candidates.is_empty() {
             // Fallback: Try matching just the requested tags if mood strictness allows (optional)
@@ -59,17 +63,17 @@ impl<'a> AssetSelector<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::path::PathBuf;
     use crate::assets::types::ImageAsset;
+    use std::path::PathBuf;
 
     fn create_test_registry() -> AssetRegistry {
         let mut registry = AssetRegistry::new();
-        
+
         registry.add(Asset::Image(ImageAsset {
             path: PathBuf::from("img1.jpg"),
             tags: vec!["nature".to_string(), "calm".to_string()],
         }));
-        
+
         registry.add(Asset::Image(ImageAsset {
             path: PathBuf::from("img2.jpg"),
             tags: vec!["city".to_string(), "busy".to_string()],
@@ -159,7 +163,7 @@ mod tests {
             tags: vec!["action".to_string()],
             duration: None,
         }));
-        
+
         let selector = AssetSelector::new(&registry);
         let mood = Mood {
             name: "Action".to_string(),
@@ -184,7 +188,7 @@ mod tests {
             tags: vec!["ambient".to_string()],
             duration: None,
         }));
-        
+
         let selector = AssetSelector::new(&registry);
         let mood = Mood {
             name: "Ambient".to_string(),
