@@ -1,6 +1,7 @@
 mod assets;
 mod config;
 mod core;
+mod llm;
 mod permissions;
 
 use crate::core::app::App;
