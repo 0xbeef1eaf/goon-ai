@@ -1,6 +1,7 @@
 mod config;
 mod core;
 mod permissions;
+mod assets;
 
 use crate::core::app::App;
 use anyhow::Result;
