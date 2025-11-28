@@ -159,3 +159,8 @@ Assets are organized into "Packs" and filtered by "Moods".
 
 When interacting with package management files, always utilise the tool to ensure the best results.
 Editing Cargo.toml or Cargo.lock directly is bad behaviour, always use command line `cargo ...`
+
+# Developer Workflow
+
+All changes must be made to a new branch
+PRs must not be created

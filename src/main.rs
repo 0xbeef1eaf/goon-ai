@@ -3,6 +3,8 @@ mod config;
 mod core;
 mod llm;
 mod permissions;
+mod sdk;
+mod typescript;
 
 use crate::core::app::App;
 use anyhow::Result;
