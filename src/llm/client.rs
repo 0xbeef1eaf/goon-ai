@@ -1,6 +1,7 @@
 use anyhow::Result;
 use ollama_rs::{Ollama, generation::completion::request::GenerationRequest};
 use crate::config::settings::LLMSettings;
+use url::Url;
 
 #[allow(dead_code)]
 pub struct LLMClient {
@@ -11,14 +12,15 @@ pub struct LLMClient {
 impl LLMClient {
     #[allow(dead_code)]
     pub fn new(settings: &LLMSettings, model: &str) -> Self {
-        let _host = &settings.host;
-        // Parse host to get port if needed, but ollama-rs defaults to localhost:11434
-        // For now, we assume the host string is sufficient or we might need to parse it.
-        // ollama-rs constructor takes host and port.
-        // Let's assume standard default for now or parse from settings.
-        // A simple implementation:
-        let client = Ollama::default(); 
-        // TODO: Configure client with host from settings if it differs from default
+        let url = Url::parse(&settings.host).unwrap_or_else(|_| {
+            eprintln!("Invalid LLM host URL: {}, defaulting to http://localhost:11434", settings.host);
+            Url::parse("http://localhost:11434").unwrap()
+        });
+
+        let host = format!("{}://{}", url.scheme(), url.host_str().unwrap_or("localhost"));
+        let port = url.port().unwrap_or(11434);
+
+        let client = Ollama::new(host, port);
         
         Self {
             client,
