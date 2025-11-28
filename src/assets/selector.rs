@@ -1,7 +1,7 @@
 use crate::assets::registry::AssetRegistry;
 use crate::assets::types::Asset;
 use crate::config::pack::Mood;
-use rand::seq::SliceRandom;
+use rand::prelude::IndexedRandom;
 
 #[allow(dead_code)]
 pub struct AssetSelector<'a> {
@@ -65,7 +65,7 @@ impl<'a> AssetSelector<'a> {
             return None;
         }
 
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         candidates.choose(&mut rng).copied()
     }
 }
