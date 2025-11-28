@@ -21,3 +21,30 @@ impl Executor {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_executor_run() {
+        let executor = Executor::new();
+        let permissions = Permissions {
+            allowed: vec!["all".to_string()],
+        };
+        let code = r#"
+            goon.system.log("Executor test");
+        "#;
+        let result = executor.execute(code, permissions).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_executor_compile_error() {
+        let executor = Executor::new();
+        let permissions = Permissions { allowed: vec![] };
+        let code = "const x: number = ;"; // Invalid syntax
+        let result = executor.execute(code, permissions).await;
+        assert!(result.is_err());
+    }
+}
