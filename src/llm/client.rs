@@ -1,5 +1,8 @@
 use anyhow::Result;
-use ollama_rs::{Ollama, generation::completion::request::GenerationRequest};
+use ollama_rs::{
+    generation::chat::{request::ChatMessageRequest, ChatMessage},
+    Ollama,
+};
 use crate::config::settings::LLMSettings;
 use url::Url;
 
@@ -29,10 +32,10 @@ impl LLMClient {
     }
 
     #[allow(dead_code)]
-    pub async fn generate(&self, prompt: &str) -> Result<String> {
-        let request = GenerationRequest::new(self.model.clone(), prompt.to_string());
-        let response = self.client.generate(request).await?;
-        Ok(response.response)
+    pub async fn chat(&self, messages: Vec<ChatMessage>) -> Result<String> {
+        let request = ChatMessageRequest::new(self.model.clone(), messages);
+        let response = self.client.send_chat_messages(request).await?;
+        Ok(response.message.content)
     }
     
     #[allow(dead_code)]

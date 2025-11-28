@@ -1,6 +1,7 @@
 use crate::config::pack::PackConfig;
 use crate::config::settings::User;
 use crate::llm::conversation::ConversationManager;
+use ollama_rs::generation::chat::{ChatMessage, MessageRole};
 
 #[allow(dead_code)]
 pub struct PromptBuilder;
@@ -13,49 +14,56 @@ impl PromptBuilder {
         user: &User,
         history: &ConversationManager,
         // sdk_defs: &str, // TODO: Pass SDK definitions
-    ) -> String {
-        let mut prompt = String::new();
+    ) -> Vec<ChatMessage> {
+        let mut messages = Vec::new();
+        let mut system_content = String::new();
 
         // 1. System Prompt
-        prompt.push_str("# System Prompt\n");
+        system_content.push_str("# System Prompt\n");
         // TODO: Load system prompt from pack config if available, or use default
-        prompt.push_str("You are an AI assistant designed to help test the functionality of goon.ai.\n");
-        prompt.push_str("You can display images, play videos, and play audio using the provided SDK.\n\n");
+        system_content.push_str("You are an AI assistant designed to help test the functionality of goon.ai.\n");
+        system_content.push_str("You can display images, play videos, and play audio using the provided SDK.\n\n");
 
         // 2. Mood
-        prompt.push_str("# Current Mood\n");
-        prompt.push_str(&format!("The user's current mood is: **{}**\n", mood));
+        system_content.push_str("# Current Mood\n");
+        system_content.push_str(&format!("The user's current mood is: **{}**\n", mood));
         // Find mood description
         if let Some(m) = pack_config.moods.iter().find(|m| m.name == mood) {
-             prompt.push_str(&format!("{}\n\n", m.description));
+             system_content.push_str(&format!("{}\n\n", m.description));
         } else {
-             prompt.push('\n');
+             system_content.push('\n');
         }
 
         // 3. SDK Definitions
-        prompt.push_str("# Available SDK Functions\n");
-        prompt.push_str("```typescript\n");
+        system_content.push_str("# Available SDK Functions\n");
+        system_content.push_str("```typescript\n");
         // TODO: Insert actual SDK definitions here
-        prompt.push_str("// SDK definitions will go here\n");
-        prompt.push_str("```\n\n");
+        system_content.push_str("// SDK definitions will go here\n");
+        system_content.push_str("```\n\n");
 
         // 4. User Profile
-        prompt.push_str("# User Profile\n");
-        prompt.push_str(&format!("Name: {}\n", user.name));
-        prompt.push_str(&format!("Gender: {}\n\n", user.gender));
+        system_content.push_str("# User Profile\n");
+        system_content.push_str(&format!("Name: {}\n", user.name));
+        system_content.push_str(&format!("Gender: {}\n\n", user.gender));
 
-        // 5. History
-        prompt.push_str("# Recent History\n");
+        // 5. Task
+        system_content.push_str("# Your Task\n");
+        system_content.push_str("Generate TypeScript code using the SDK functions above to interact with the user.\n");
+
+        messages.push(ChatMessage::new(MessageRole::System, system_content));
+
+        // 6. History
         for msg in history.get_history() {
-            prompt.push_str(&format!("{}: {}\n", msg.role, msg.content));
+            let role = match msg.role.as_str() {
+                "user" => MessageRole::User,
+                "assistant" => MessageRole::Assistant,
+                "system" => MessageRole::System,
+                _ => MessageRole::User,
+            };
+            messages.push(ChatMessage::new(role, msg.content.clone()));
         }
-        prompt.push('\n');
 
-        // 6. Task
-        prompt.push_str("# Your Task\n");
-        prompt.push_str("Generate TypeScript code using the SDK functions above to interact with the user.\n");
-
-        prompt
+        messages
     }
 }
 
@@ -105,18 +113,29 @@ mod tests {
         history.add_message("user", "Hello");
         history.add_message("assistant", "Hi there");
 
-        let prompt = PromptBuilder::build(
+        let messages = PromptBuilder::build(
             &pack_config,
             "Happy",
             &user,
             &history,
         );
 
-        assert!(prompt.contains("# System Prompt"));
-        assert!(prompt.contains("The user's current mood is: **Happy**"));
-        assert!(prompt.contains("A happy mood description."));
-        assert!(prompt.contains("Name: Test User"));
-        assert!(prompt.contains("user: Hello"));
-        assert!(prompt.contains("assistant: Hi there"));
+        assert_eq!(messages.len(), 3); // System + User + Assistant
+        
+        let system_msg = &messages[0];
+        assert_eq!(system_msg.role, MessageRole::System);
+        assert!(system_msg.content.contains("# System Prompt"));
+        assert!(system_msg.content.contains("The user's current mood is: **Happy**"));
+        assert!(system_msg.content.contains("A happy mood description."));
+        assert!(system_msg.content.contains("Name: Test User"));
+        assert!(system_msg.content.contains("# Your Task"));
+
+        let user_msg = &messages[1];
+        assert_eq!(user_msg.role, MessageRole::User);
+        assert_eq!(user_msg.content, "Hello");
+
+        let assistant_msg = &messages[2];
+        assert_eq!(assistant_msg.role, MessageRole::Assistant);
+        assert_eq!(assistant_msg.content, "Hi there");
     }
 }
