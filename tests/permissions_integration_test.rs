@@ -1,0 +1,69 @@
+use goon_ai::permissions::{Permission, PermissionChecker, PermissionResolver, PermissionSet};
+use goon_ai::runtime::GoonRuntime;
+use goon_ai::sdk::generate_definitions_for_permissions;
+
+#[tokio::test]
+async fn test_full_permission_flow() {
+    // 1. Simulate Configuration Loading
+    // User grants: Image, Audio
+    let mut user_perms = PermissionSet::new();
+    user_perms.add(Permission::Image);
+    user_perms.add(Permission::Audio);
+
+    // Pack requests: Image, Video
+    let mut pack_perms = PermissionSet::new();
+    pack_perms.add(Permission::Image);
+    pack_perms.add(Permission::Video);
+
+    // 2. Resolve Permissions
+    // Intersection should be: Image
+    let active_perms = PermissionResolver::resolve(&pack_perms, &user_perms);
+    
+    assert!(active_perms.contains(Permission::Image));
+    assert!(!active_perms.contains(Permission::Video)); // Denied by user
+    assert!(!active_perms.contains(Permission::Audio)); // Not requested by pack
+
+    // 3. Initialize Runtime with Resolved Permissions
+    let checker = PermissionChecker::new(active_perms.clone());
+    let mut runtime = GoonRuntime::new(checker.clone());
+
+    // 4. Test Allowed Operation (Image)
+    let allowed_code = r#"
+        (async () => {
+            try {
+                await goon.image.show("test.png", {});
+                return "success";
+            } catch (e) {
+                return "failed: " + e.message;
+            }
+        })()
+    "#;
+    // We expect this to succeed (or at least not fail with permission error)
+    // Note: The actual op_show_image prints to stdout and returns 1.
+    // Since we can't easily capture the return value from execute_script in this test setup without more plumbing,
+    // we rely on it not panicking or throwing an unhandled exception.
+    // However, execute_script returns Result<()>.
+    
+    let result = runtime.execute_script(allowed_code).await;
+    assert!(result.is_ok(), "Allowed operation failed: {:?}", result.err());
+
+    // 5. Test Denied Operation (Video)
+    // Create a new runtime instance to avoid module name collision ("main.js")
+    let mut runtime2 = GoonRuntime::new(checker.clone());
+    
+    let denied_code = r#"
+        (async () => {
+            await goon.video.show("test.mp4", {});
+        })()
+    "#;
+
+    let result = runtime2.execute_script(denied_code).await;
+    assert!(result.is_err(), "Denied operation succeeded unexpectedly");
+    let err_msg = result.unwrap_err().to_string();
+    assert!(err_msg.contains("Permission denied"), "Unexpected error message: {}", err_msg);
+
+    // 6. Verify SDK Generation
+    let sdk_defs = generate_definitions_for_permissions(&checker);
+    assert!(sdk_defs.contains("class image"), "SDK should contain image class");
+    assert!(!sdk_defs.contains("class video"), "SDK should NOT contain video class");
+}

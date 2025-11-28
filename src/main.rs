@@ -1,13 +1,4 @@
-mod assets;
-mod config;
-mod core;
-mod llm;
-mod permissions;
-mod runtime;
-mod sdk;
-mod typescript;
-
-use crate::core::app::App;
+use goon_ai::core::app::App;
 use anyhow::Result;
 
 fn main() -> Result<()> {

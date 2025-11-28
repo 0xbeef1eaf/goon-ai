@@ -13,6 +13,12 @@ pub struct TypeScriptCompiler {
     cm: Arc<SourceMap>,
 }
 
+impl Default for TypeScriptCompiler {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl TypeScriptCompiler {
     pub fn new() -> Self {
         let cm = Arc::new(SourceMap::default());

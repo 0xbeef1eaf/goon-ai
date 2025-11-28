@@ -52,7 +52,7 @@ impl PackConfig {
     }
 
     #[allow(dead_code)]
-    pub fn from_str(content: &str) -> Result<Self> {
+    pub fn parse(content: &str) -> Result<Self> {
         let config: PackConfig =
             serde_yaml::from_str(content).context("Failed to parse pack config")?;
         Ok(config)
@@ -82,7 +82,7 @@ assets:
       tags:
         - test
 "#;
-        let config = PackConfig::from_str(yaml).unwrap();
+        let config = PackConfig::parse(yaml).unwrap();
         assert_eq!(config.meta.name, "Test Pack");
         assert_eq!(config.moods[0].name, "default");
         assert_eq!(
