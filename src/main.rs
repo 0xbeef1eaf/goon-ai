@@ -3,6 +3,7 @@ mod config;
 mod core;
 mod llm;
 mod permissions;
+mod runtime;
 mod sdk;
 mod typescript;
 
