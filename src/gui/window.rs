@@ -66,6 +66,15 @@ impl Window {
         Ok(())
     }
 
+    pub fn resize(&mut self, new_size: winit::dpi::PhysicalSize<u32>) {
+        if let Some(renderer) = &mut self.renderer {
+            renderer.resize(new_size);
+            if let Some(content) = &mut self.content_renderer {
+                content.resize(&renderer.device, &renderer.queue, &renderer.config);
+            }
+        }
+    }
+
     pub fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
         let opacity = self.get_render_opacity();
         if let Some(renderer) = &mut self.renderer {

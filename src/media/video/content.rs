@@ -1,162 +1,63 @@
 use crate::gui::content::{ContentConstructor, Renderable};
-use crate::media::image::animation::Animation;
+use crate::media::video::player::VideoPlayer;
+use crate::media::video::renderer::VideoRenderer;
 use anyhow::Result;
-use image::RgbaImage;
+use std::sync::Arc;
 use std::time::Instant;
 use wgpu::util::DeviceExt;
+use wgpu::{CommandEncoder, Device, Queue, SurfaceConfiguration, TextureView};
 
-pub struct ImageContent {
-    pub image: Option<RgbaImage>,
-    pub animation: Option<Animation>,
+pub struct VideoContent {
+    pub player: Arc<VideoPlayer>,
 }
 
-impl ContentConstructor for ImageContent {
-    fn create_renderer(
-        &self,
-        device: &wgpu::Device,
-        queue: &wgpu::Queue,
-        config: &wgpu::SurfaceConfiguration,
-    ) -> Result<Box<dyn Renderable>> {
-        if let Some(anim) = &self.animation
-            && let Some(first_frame) = anim.frames.first()
-        {
-            let mut renderer = ImageRenderer::new(device, queue, config, &first_frame.buffer)?;
-            renderer.animation_state = Some(AnimationState {
-                animation: anim.clone(), // Clone animation data
-                current_frame: 0,
-                next_frame_time: Instant::now() + first_frame.delay,
-            });
-            return Ok(Box::new(renderer));
-        }
-
-        if let Some(img) = &self.image {
-            let renderer = ImageRenderer::new(device, queue, config, img)?;
-            return Ok(Box::new(renderer));
-        }
-
-        Err(anyhow::anyhow!("No image content provided"))
+impl VideoContent {
+    pub fn new(player: Arc<VideoPlayer>) -> Self {
+        Self { player }
     }
 }
 
-#[derive(Clone)]
-struct AnimationState {
-    animation: Animation,
-    current_frame: usize,
-    next_frame_time: Instant,
+impl ContentConstructor for VideoContent {
+    fn create_renderer(
+        &self,
+        device: &Device,
+        queue: &Queue,
+        config: &SurfaceConfiguration,
+    ) -> Result<Box<dyn Renderable>> {
+        let renderer = VideoRenderable::new(device, queue, config, self.player.clone())?;
+        Ok(Box::new(renderer))
+    }
 }
 
-pub struct ImageRenderer {
+struct VideoRenderable {
+    #[allow(dead_code)]
+    player: Arc<VideoPlayer>,
+    renderer: VideoRenderer,
     texture: wgpu::Texture,
     bind_group: wgpu::BindGroup,
     pipeline: wgpu::RenderPipeline,
     opacity_buffer: wgpu::Buffer,
-    animation_state: Option<AnimationState>,
+    buffer: Vec<u8>,
+    width: u32,
+    height: u32,
+    bind_group_layout: wgpu::BindGroupLayout,
+    sampler: wgpu::Sampler,
 }
 
-impl Renderable for ImageRenderer {
-    fn render(
-        &self,
-        encoder: &mut wgpu::CommandEncoder,
-        view: &wgpu::TextureView,
-        queue: &wgpu::Queue,
-        opacity: f32,
-    ) {
-        self.render_internal(encoder, view, queue, opacity);
-    }
-
-    fn update(&mut self, queue: &wgpu::Queue) -> Option<Instant> {
-        let mut next_time = None;
-        let mut frame_to_update = None;
-
-        if let Some(anim_state) = &mut self.animation_state {
-            let now = Instant::now();
-            if now >= anim_state.next_frame_time {
-                anim_state.current_frame =
-                    (anim_state.current_frame + 1) % anim_state.animation.frames.len();
-                let frame = &anim_state.animation.frames[anim_state.current_frame];
-                anim_state.next_frame_time = now + frame.delay;
-
-                frame_to_update = Some(frame.buffer.clone());
-            }
-            next_time = Some(anim_state.next_frame_time);
-        }
-
-        if let Some(buffer) = frame_to_update {
-            self.update_image(queue, &buffer);
-        }
-
-        next_time
-    }
-
-    fn resize(
-        &mut self,
-        _device: &wgpu::Device,
-        _queue: &wgpu::Queue,
-        _config: &wgpu::SurfaceConfiguration,
-    ) {
-    }
-}
-
-impl ImageRenderer {
+impl VideoRenderable {
     pub fn new(
-        device: &wgpu::Device,
-        queue: &wgpu::Queue,
-        config: &wgpu::SurfaceConfiguration,
-        image: &RgbaImage,
+        device: &Device,
+        _queue: &Queue,
+        config: &SurfaceConfiguration,
+        player: Arc<VideoPlayer>,
     ) -> Result<Self> {
-        // ... existing new implementation ...
-        // Need to copy the body of new here, but I'll use edit to wrap it.
-        // Wait, I'm replacing the whole file content structure basically.
-        // Let's just add the impl Renderable and struct updates.
+        let renderer = VideoRenderer::new(player.get_mpv())?;
 
-        // I'll do this in steps to avoid massive replace block if possible,
-        // but the struct definition changes so I need to update new() return type too.
+        let width = config.width;
+        let height = config.height;
 
-        // Let's just use the existing new() logic but update the struct init.
-
-        let texture_size = wgpu::Extent3d {
-            width: image.width(),
-            height: image.height(),
-            depth_or_array_layers: 1,
-        };
-
-        let texture = device.create_texture(&wgpu::TextureDescriptor {
-            size: texture_size,
-            mip_level_count: 1,
-            sample_count: 1,
-            dimension: wgpu::TextureDimension::D2,
-            format: wgpu::TextureFormat::Rgba8UnormSrgb,
-            usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
-            label: Some("Image Texture"),
-            view_formats: &[],
-        });
-
-        queue.write_texture(
-            wgpu::ImageCopyTexture {
-                texture: &texture,
-                mip_level: 0,
-                origin: wgpu::Origin3d::ZERO,
-                aspect: wgpu::TextureAspect::All,
-            },
-            image,
-            wgpu::ImageDataLayout {
-                offset: 0,
-                bytes_per_row: Some(4 * image.width()),
-                rows_per_image: Some(image.height()),
-            },
-            texture_size,
-        );
-
-        let texture_view = texture.create_view(&wgpu::TextureViewDescriptor::default());
-        let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
-            address_mode_u: wgpu::AddressMode::ClampToEdge,
-            address_mode_v: wgpu::AddressMode::ClampToEdge,
-            address_mode_w: wgpu::AddressMode::ClampToEdge,
-            mag_filter: wgpu::FilterMode::Linear,
-            min_filter: wgpu::FilterMode::Linear,
-            mipmap_filter: wgpu::FilterMode::Nearest,
-            ..Default::default()
-        });
+        let (texture, texture_view, sampler) =
+            Self::create_texture_resources(device, width, height);
 
         let opacity_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Opacity Buffer"),
@@ -217,7 +118,7 @@ impl ImageRenderer {
 
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("Shader"),
-            source: wgpu::ShaderSource::Wgsl(include_str!("shader.wgsl").into()),
+            source: wgpu::ShaderSource::Wgsl(include_str!("../image/shader.wgsl").into()),
         });
 
         let render_pipeline_layout =
@@ -265,44 +166,66 @@ impl ImageRenderer {
             cache: None,
         });
 
+        let buffer = vec![0u8; (width * height * 4) as usize];
+
         Ok(Self {
+            player,
+            renderer,
             texture,
             bind_group,
             pipeline,
             opacity_buffer,
-            animation_state: None,
+            buffer,
+            width,
+            height,
+            bind_group_layout,
+            sampler,
         })
     }
 
-    pub fn update_image(&self, queue: &wgpu::Queue, image: &RgbaImage) {
+    fn create_texture_resources(
+        device: &Device,
+        width: u32,
+        height: u32,
+    ) -> (wgpu::Texture, wgpu::TextureView, wgpu::Sampler) {
         let texture_size = wgpu::Extent3d {
-            width: image.width(),
-            height: image.height(),
+            width,
+            height,
             depth_or_array_layers: 1,
         };
 
-        queue.write_texture(
-            wgpu::ImageCopyTexture {
-                texture: &self.texture,
-                mip_level: 0,
-                origin: wgpu::Origin3d::ZERO,
-                aspect: wgpu::TextureAspect::All,
-            },
-            image,
-            wgpu::ImageDataLayout {
-                offset: 0,
-                bytes_per_row: Some(4 * image.width()),
-                rows_per_image: Some(image.height()),
-            },
-            texture_size,
-        );
-    }
+        let texture = device.create_texture(&wgpu::TextureDescriptor {
+            size: texture_size,
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: wgpu::TextureFormat::Rgba8UnormSrgb,
+            usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
+            label: Some("Video Texture"),
+            view_formats: &[],
+        });
 
-    fn render_internal(
+        let texture_view = texture.create_view(&wgpu::TextureViewDescriptor::default());
+        let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
+            address_mode_u: wgpu::AddressMode::ClampToEdge,
+            address_mode_v: wgpu::AddressMode::ClampToEdge,
+            address_mode_w: wgpu::AddressMode::ClampToEdge,
+            mag_filter: wgpu::FilterMode::Linear,
+            min_filter: wgpu::FilterMode::Linear,
+            mipmap_filter: wgpu::FilterMode::Nearest,
+            ..Default::default()
+        });
+
+        (texture, texture_view, sampler)
+    }
+}
+
+impl Renderable for VideoRenderable {
+    fn render(
         &self,
-        encoder: &mut wgpu::CommandEncoder,
-        view: &wgpu::TextureView,
-        queue: &wgpu::Queue,
+        encoder: &mut CommandEncoder,
+        view: &TextureView,
+        queue: &Queue,
         opacity: f32,
     ) {
         queue.write_buffer(&self.opacity_buffer, 0, bytemuck::cast_slice(&[opacity]));
@@ -325,5 +248,86 @@ impl ImageRenderer {
         render_pass.set_pipeline(&self.pipeline);
         render_pass.set_bind_group(0, &self.bind_group, &[]);
         render_pass.draw(0..6, 0..1);
+    }
+
+    fn update(&mut self, queue: &Queue) -> Option<Instant> {
+        if self.renderer.update() {
+            // New frame available
+            let stride = self.width as i32 * 4;
+            if self
+                .renderer
+                .render_sw(
+                    self.width as i32,
+                    self.height as i32,
+                    stride,
+                    "rgba",
+                    &mut self.buffer,
+                )
+                .is_ok()
+            {
+                let texture_size = wgpu::Extent3d {
+                    width: self.width,
+                    height: self.height,
+                    depth_or_array_layers: 1,
+                };
+
+                queue.write_texture(
+                    wgpu::ImageCopyTexture {
+                        texture: &self.texture,
+                        mip_level: 0,
+                        origin: wgpu::Origin3d::ZERO,
+                        aspect: wgpu::TextureAspect::All,
+                    },
+                    &self.buffer,
+                    wgpu::ImageDataLayout {
+                        offset: 0,
+                        bytes_per_row: Some(4 * self.width),
+                        rows_per_image: Some(self.height),
+                    },
+                    texture_size,
+                );
+
+                return Some(Instant::now());
+            }
+        }
+
+        // Poll every 16ms
+        Some(Instant::now() + std::time::Duration::from_millis(16))
+    }
+
+    fn resize(&mut self, device: &Device, _queue: &Queue, config: &SurfaceConfiguration) {
+        if config.width > 0
+            && config.height > 0
+            && (config.width != self.width || config.height != self.height)
+        {
+            self.width = config.width;
+            self.height = config.height;
+            self.buffer
+                .resize((self.width * self.height * 4) as usize, 0);
+
+            let (texture, texture_view, _) =
+                Self::create_texture_resources(device, self.width, self.height);
+            self.texture = texture;
+
+            // Recreate bind group
+            self.bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                layout: &self.bind_group_layout,
+                entries: &[
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: wgpu::BindingResource::TextureView(&texture_view),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 1,
+                        resource: wgpu::BindingResource::Sampler(&self.sampler),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 2,
+                        resource: self.opacity_buffer.as_entire_binding(),
+                    },
+                ],
+                label: Some("texture_bind_group"),
+            });
+        }
     }
 }

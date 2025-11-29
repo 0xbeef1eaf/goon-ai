@@ -2,6 +2,10 @@ use crate::assets::registry::AssetRegistry;
 use crate::assets::selector::AssetSelector;
 use crate::assets::types::Asset;
 use crate::config::pack::Mood;
+use crate::gui::window_manager::GuiInterface;
+use crate::media::video::content::VideoContent;
+use crate::media::video::downloader::MpvDownloader;
+use crate::media::video::player::VideoPlayer;
 use crate::runtime::error::OpError;
 use crate::runtime::utils::check_permission;
 use crate::sdk::types::WindowOptions;
@@ -22,21 +26,24 @@ pub struct VideoOptions {
     pub loop_: Option<bool>, // "loop" is a keyword
     pub volume: Option<f32>,
     pub autoplay: Option<bool>,
+    pub duration: Option<u64>,
     #[serde(flatten)]
     pub window: WindowOptions,
 }
 
 #[op2(async)]
+#[string]
 pub async fn op_show_video(
     state: Rc<RefCell<OpState>>,
     #[serde] options: Option<serde_json::Value>,
-) -> Result<u32, OpError> {
-    let (registry, mood) = {
+) -> Result<String, OpError> {
+    let (gui_controller, registry, mood) = {
         let mut state = state.borrow_mut();
         check_permission(&mut state, "video")?;
+        let gui = state.borrow::<Arc<dyn GuiInterface>>().clone();
         let registry = state.borrow::<Arc<AssetRegistry>>().clone();
         let mood = state.borrow::<Mood>().clone();
-        (registry, mood)
+        (gui, registry, mood)
     };
 
     let opts: VideoOptions = if let Some(o) = options {
@@ -58,8 +65,57 @@ pub async fn op_show_video(
     };
 
     println!("Showing video: {:?} with options: {:?}", path, opts);
-    // TODO: Implement actual video showing logic (similar to image but with video player)
-    Ok(2)
+
+    MpvDownloader::ensure_libmpv()
+        .await
+        .map_err(|e| OpError::new(&e.to_string()))?;
+
+    let player = VideoPlayer::new().map_err(|e| OpError::new(&e.to_string()))?;
+    player
+        .load(path.to_str().unwrap())
+        .map_err(|e| OpError::new(&e.to_string()))?;
+
+    if let Some(vol) = opts.volume {
+        player
+            .set_volume(vol as f64)
+            .map_err(|e| OpError::new(&e.to_string()))?;
+    }
+
+    let player = Arc::new(player);
+    let content = VideoContent::new(player.clone());
+
+    // Default size if not specified? Video player should probably know its size.
+    // But for now we can default to something or use window options.
+    let size = opts
+        .window
+        .size
+        .map(|s| (s.width, s.height))
+        .unwrap_or((800, 600));
+
+    let window_opts = crate::gui::window_manager::WindowOptions {
+        size: Some(size),
+        opacity: opts.window.opacity.unwrap_or(1.0),
+        always_on_top: opts.window.always_on_top.unwrap_or(false),
+        click_through: opts.window.click_through.unwrap_or(false),
+        position: opts.window.position.map(|p| (p.x, p.y)),
+        decorations: false,
+        timeout: opts.duration.map(std::time::Duration::from_secs),
+        ..Default::default()
+    };
+
+    let handle = gui_controller
+        .create_window(window_opts)
+        .map_err(|e| OpError::new(&e.to_string()))?;
+
+    gui_controller
+        .set_content(handle, Box::new(content))
+        .map_err(|e| OpError::new(&e.to_string()))?;
+
+    if opts.autoplay.unwrap_or(true) {
+        player.play().map_err(|e| OpError::new(&e.to_string()))?;
+    }
+
+    Ok(handle.0.to_string())
 }
 
 pub const TS_SOURCE: &str = include_str!("js/video.ts");

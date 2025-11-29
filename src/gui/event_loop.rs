@@ -77,10 +77,8 @@ impl ApplicationHandler<GuiCommand> for App {
             WindowEvent::Resized(physical_size) => {
                 let mut wm = self.window_manager.lock().unwrap();
                 if let Some(handle) = wm.get_handle_from_winit(window_id) {
-                    if let Some(renderer) =
-                        wm.get_window_mut(handle).and_then(|w| w.renderer.as_mut())
-                    {
-                        renderer.resize(physical_size);
+                    if let Some(window) = wm.get_window_mut(handle) {
+                        window.resize(physical_size);
                     }
                     wm.push_message(WindowMessage::Resized(
                         handle,
@@ -98,9 +96,7 @@ impl ApplicationHandler<GuiCommand> for App {
                     match window.render() {
                         Ok(_) => {}
                         Err(wgpu::SurfaceError::Lost) => {
-                            if let Some(renderer) = &mut window.renderer {
-                                renderer.resize(window.winit_window.inner_size())
-                            }
+                            window.resize(window.winit_window.inner_size());
                         }
                         Err(wgpu::SurfaceError::OutOfMemory) => event_loop.exit(),
                         Err(e) => eprintln!("{:?}", e),
