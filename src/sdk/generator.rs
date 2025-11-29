@@ -24,7 +24,7 @@ pub fn generate_definitions(allowed_modules: &[String]) -> String {
             let source_path = format!("src/sdk/{}.rs", module.name);
             if Path::new(&source_path).exists() {
                 let ops = analysis::analyze_source(Path::new(&source_path));
-                for op in ops {
+                for _op in ops {
                     // This is where we could auto-generate the function signature
                     // For now, we rely on the template, but we could verify or append here
                     // definitions.push_str(&format!("// Found op: {}\n", op.name));

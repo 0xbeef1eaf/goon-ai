@@ -83,7 +83,7 @@ async fn test_asset_loading_to_permission_check() {
         .select_image(mood, &["default".to_string()])
         .expect("Should find image asset");
 
-    let image_path = if let Asset::Image(img) = image_asset {
+    let _image_path = if let Asset::Image(img) = image_asset {
         img.path.to_str().unwrap().to_string()
     } else {
         panic!("Expected ImageAsset");
@@ -94,7 +94,7 @@ async fn test_asset_loading_to_permission_check() {
         .select_video(mood, &["default".to_string()])
         .expect("Should find video asset");
 
-    let video_path = if let Asset::Video(vid) = video_asset {
+    let _video_path = if let Asset::Video(vid) = video_asset {
         vid.path.to_str().unwrap().to_string()
     } else {
         panic!("Expected VideoAsset");

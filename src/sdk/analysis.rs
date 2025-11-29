@@ -24,9 +24,7 @@ impl<'ast> Visit<'ast> for OpVisitor {
         // Check if function has #[op2] attribute
         let is_op = node.attrs.iter().any(|attr| {
             if let Meta::List(meta) = &attr.meta {
-                if let Some(ident) = meta.path.get_ident() {
-                    return ident == "op2";
-                }
+                return meta.path.is_ident("op2");
             }
             false
         });
@@ -38,29 +36,35 @@ impl<'ast> Visit<'ast> for OpVisitor {
             // Extract doc comments
             for attr in &node.attrs {
                 if let Meta::NameValue(meta) = &attr.meta {
-                    if meta.path.is_ident("doc") {
-                        if let syn::Expr::Lit(expr_lit) = &meta.value {
-                            if let syn::Lit::Str(lit_str) = &expr_lit.lit {
-                                docs.push(lit_str.value().trim().to_string());
-                            }
-                        }
+                    if !meta.path.is_ident("doc") {
+                        continue;
+                    }
+                    if let syn::Expr::Lit(syn::ExprLit {
+                        lit: syn::Lit::Str(lit_str),
+                        ..
+                    }) = &meta.value
+                    {
+                        docs.push(lit_str.value().trim().to_string());
                     }
                 }
             }
 
             let mut args = Vec::new();
             for input in &node.sig.inputs {
-                if let syn::FnArg::Typed(pat_type) = input {
-                    if let syn::Pat::Ident(pat_ident) = &*pat_type.pat {
-                        let arg_name = pat_ident.ident.to_string();
-                        // Simple type extraction (this is a simplification)
-                        let type_name = quote::quote!(#pat_type.ty).to_string();
-                        args.push(ArgInfo {
-                            name: arg_name,
-                            type_name,
-                        });
-                    }
-                }
+                let syn::FnArg::Typed(pat_type) = input else {
+                    continue;
+                };
+                let syn::Pat::Ident(pat_ident) = &*pat_type.pat else {
+                    continue;
+                };
+
+                let arg_name = pat_ident.ident.to_string();
+                // Simple type extraction (this is a simplification)
+                let type_name = quote::quote!(#pat_type.ty).to_string();
+                args.push(ArgInfo {
+                    name: arg_name,
+                    type_name,
+                });
             }
 
             self.ops.push(OpInfo { name, docs, args });
