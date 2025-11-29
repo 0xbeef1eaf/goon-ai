@@ -3,6 +3,7 @@ use goon_ai::gui::content::ContentConstructor;
 use goon_ai::gui::window_manager::{GuiInterface, WindowHandle, WindowOptions};
 use goon_ai::permissions::{Permission, PermissionChecker, PermissionResolver, PermissionSet};
 use goon_ai::runtime::GoonRuntime;
+use goon_ai::runtime::runtime::RuntimeContext;
 use goon_ai::sdk::generate_definitions_for_permissions;
 
 struct MockGuiController;
@@ -56,12 +57,16 @@ async fn test_full_permission_flow() {
         tags: vec![],
     };
 
-    let mut runtime = GoonRuntime::new(
-        checker.clone(),
-        gui_controller.clone(),
-        registry.clone(),
-        mood.clone(),
-    );
+    let context = RuntimeContext {
+        permissions: checker.clone(),
+        gui_controller: gui_controller.clone(),
+        registry: registry.clone(),
+        mood: mood.clone(),
+        max_audio_concurrent: 10,
+        max_video_concurrent: 3,
+    };
+
+    let mut runtime = GoonRuntime::new(context);
 
     // 4. Test Allowed Operation (Image)
     let allowed_code = r#"
@@ -89,12 +94,16 @@ async fn test_full_permission_flow() {
 
     // 5. Test Denied Operation (Video)
     // Create a new runtime instance to avoid module name collision ("main.js")
-    let mut runtime2 = GoonRuntime::new(
-        checker.clone(),
-        gui_controller.clone(),
-        registry.clone(),
-        mood.clone(),
-    );
+    let context2 = RuntimeContext {
+        permissions: checker.clone(),
+        gui_controller: gui_controller.clone(),
+        registry: registry.clone(),
+        mood: mood.clone(),
+        max_audio_concurrent: 10,
+        max_video_concurrent: 3,
+    };
+
+    let mut runtime2 = GoonRuntime::new(context2);
 
     let denied_code = r#"
         (async () => {

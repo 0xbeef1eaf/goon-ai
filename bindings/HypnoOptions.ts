@@ -2,4 +2,4 @@
 import type { Position } from "./Position";
 import type { Size } from "./Size";
 
-export type HypnoOptions = { tags: Array<string> | null, duration: bigint | null, opacity: number | null, position: Position | null, size: Size | null, alwaysOnTop: boolean | null, clickThrough: boolean | null, };
+export type HypnoOptions = { tags: Array<string> | null, duration: bigint | null, opacity: number | null, position: Position | null, size: Size | null, alwaysOnTop: boolean | null, clickThrough: boolean | null, decorations: boolean | null, };

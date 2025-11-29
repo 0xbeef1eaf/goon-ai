@@ -50,6 +50,11 @@ impl App {
 
     pub fn run(&self) -> Result<()> {
         println!("App running with mood: {}", self.settings.runtime.pack.mood);
+
+        let max_audio = self.settings.runtime.popups.audio.max.unwrap_or(1) as usize;
+        let max_video = self.settings.runtime.popups.video.max.unwrap_or(1) as usize;
+        println!("Max concurrent audio: {}, video: {}", max_audio, max_video);
+
         // Main loop will go here (Issue #16)
         Ok(())
     }

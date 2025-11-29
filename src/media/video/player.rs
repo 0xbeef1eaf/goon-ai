@@ -1,73 +1,107 @@
-use anyhow::{Context, Result};
-use libmpv2::Mpv;
-use std::sync::{
-    Arc,
-    atomic::{AtomicBool, Ordering},
-};
+use super::ipc::IpcClient;
+use anyhow::Result;
+use serde_json::json;
+use std::path::PathBuf;
+use std::process::Stdio;
+use tokio::process::{Child, Command};
+use tokio::time::{Duration, sleep};
+use uuid::Uuid;
 
 pub struct VideoPlayer {
-    mpv: Mpv,
-    playing: Arc<AtomicBool>,
+    process: Child,
+    ipc: Option<IpcClient>,
+    socket_path: PathBuf,
 }
 
 impl VideoPlayer {
-    pub fn new() -> Result<Self> {
-        let mpv = Mpv::new()
-            .map_err(|e| anyhow::anyhow!(e.to_string()))
-            .context("Failed to initialize MPV")?;
+    pub async fn spawn(
+        file_path: PathBuf,
+        options: &crate::sdk::video::VideoOptions,
+    ) -> Result<Self> {
+        let socket_id = Uuid::new_v4();
+        let socket_path = std::env::temp_dir().join(format!("mpv-socket-{}", socket_id));
 
-        // Set default properties
-        mpv.set_property("vo", "libmpv")
-            .map_err(|e| anyhow::anyhow!(e.to_string()))?;
-        mpv.set_property("hwdec", "auto")
-            .map_err(|e| anyhow::anyhow!(e.to_string()))?;
+        let mut cmd = Command::new("mpv");
+        cmd.arg(&file_path)
+            .arg(format!("--input-ipc-server={}", socket_path.display()))
+            .arg("--idle")
+            .arg("--keep-open")
+            .stdout(Stdio::null())
+            .stderr(Stdio::null());
+
+        if let Some(vol) = options.volume {
+            cmd.arg(format!("--volume={}", vol * 100.0));
+        }
+
+        if options.loop_.unwrap_or(false) {
+            cmd.arg("--loop");
+        }
+
+        // Window options
+        if let Some(size) = &options.window.size {
+            cmd.arg(format!("--geometry={}x{}", size.width, size.height));
+        }
+
+        if let Some(pos) = &options.window.position {
+            cmd.arg(format!("--geometry=+{}+{}", pos.x, pos.y));
+        }
+
+        if options.window.always_on_top.unwrap_or(false) {
+            cmd.arg("--ontop");
+        }
+
+        if !options.window.decorations.unwrap_or(true) {
+            cmd.arg("--no-border");
+        }
+
+        let process = cmd.spawn()?;
+
+        // Wait for socket to be created
+        let mut ipc = None;
+        for _ in 0..20 {
+            if let Ok(client) = IpcClient::connect(socket_path.clone()).await {
+                ipc = Some(client);
+                break;
+            }
+            sleep(Duration::from_millis(100)).await;
+        }
 
         Ok(Self {
-            mpv,
-            playing: Arc::new(AtomicBool::new(false)),
+            process,
+            ipc,
+            socket_path,
         })
     }
 
-    pub fn load(&self, path: &str) -> Result<()> {
-        self.mpv
-            .command("loadfile", &[path, "replace"])
-            .map_err(|e| anyhow::anyhow!(e.to_string()))?;
-        self.playing.store(true, Ordering::SeqCst);
+    pub async fn stop(&mut self) -> Result<()> {
+        if let Some(ipc) = &mut self.ipc {
+            let _ = ipc.send_command(vec![json!("quit")]).await;
+        } else {
+            let _ = self.process.kill().await;
+        }
         Ok(())
     }
 
-    pub fn play(&self) -> Result<()> {
-        self.mpv
-            .set_property("pause", false)
-            .map_err(|e| anyhow::anyhow!(e.to_string()))?;
-        self.playing.store(true, Ordering::SeqCst);
+    pub async fn pause(&mut self) -> Result<()> {
+        if let Some(ipc) = &mut self.ipc {
+            ipc.send_command(vec![json!("set_property"), json!("pause"), json!(true)])
+                .await?;
+        }
         Ok(())
     }
 
-    pub fn pause(&self) -> Result<()> {
-        self.mpv
-            .set_property("pause", true)
-            .map_err(|e| anyhow::anyhow!(e.to_string()))?;
-        self.playing.store(false, Ordering::SeqCst);
+    pub async fn resume(&mut self) -> Result<()> {
+        if let Some(ipc) = &mut self.ipc {
+            ipc.send_command(vec![json!("set_property"), json!("pause"), json!(false)])
+                .await?;
+        }
         Ok(())
     }
+}
 
-    pub fn stop(&self) -> Result<()> {
-        self.mpv
-            .command("stop", &[])
-            .map_err(|e| anyhow::anyhow!(e.to_string()))?;
-        self.playing.store(false, Ordering::SeqCst);
-        Ok(())
-    }
-
-    pub fn set_volume(&self, volume: f64) -> Result<()> {
-        self.mpv
-            .set_property("volume", volume)
-            .map_err(|e| anyhow::anyhow!(e.to_string()))?;
-        Ok(())
-    }
-
-    pub fn get_mpv(&self) -> &Mpv {
-        &self.mpv
+impl Drop for VideoPlayer {
+    fn drop(&mut self) {
+        // Try to clean up socket
+        let _ = std::fs::remove_file(&self.socket_path);
     }
 }

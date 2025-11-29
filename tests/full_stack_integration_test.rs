@@ -7,6 +7,7 @@ use goon_ai::gui::content::ContentConstructor;
 use goon_ai::gui::window_manager::{GuiInterface, WindowHandle, WindowOptions};
 use goon_ai::permissions::{Permission, PermissionChecker, PermissionResolver, PermissionSet};
 use goon_ai::runtime::GoonRuntime;
+use goon_ai::runtime::runtime::RuntimeContext;
 
 struct MockGuiController;
 
@@ -108,12 +109,16 @@ async fn test_asset_loading_to_permission_check() {
     let registry_arc = std::sync::Arc::new(registry);
     let mood_clone = mood.clone();
 
-    let mut runtime = GoonRuntime::new(
-        checker.clone(),
-        gui_controller.clone(),
-        registry_arc.clone(),
-        mood_clone.clone(),
-    );
+    let context = RuntimeContext {
+        permissions: checker.clone(),
+        gui_controller: gui_controller.clone(),
+        registry: registry_arc.clone(),
+        mood: mood_clone.clone(),
+        max_audio_concurrent: 10,
+        max_video_concurrent: 3,
+    };
+
+    let mut runtime = GoonRuntime::new(context);
 
     // A. Attempt to show the selected Image (Permission Granted)
     // We inject the selected path into the JS code, simulating the LLM using a path provided by the system (or known to it).
@@ -136,12 +141,16 @@ async fn test_asset_loading_to_permission_check() {
 
     // B. Attempt to show the selected Video (Permission Denied)
     // Create a new runtime to avoid module name collision
-    let mut runtime2 = GoonRuntime::new(
-        checker.clone(),
-        gui_controller.clone(),
-        registry_arc.clone(),
-        mood_clone.clone(),
-    );
+    let context2 = RuntimeContext {
+        permissions: checker.clone(),
+        gui_controller: gui_controller.clone(),
+        registry: registry_arc.clone(),
+        mood: mood_clone.clone(),
+        max_audio_concurrent: 10,
+        max_video_concurrent: 3,
+    };
+
+    let mut runtime2 = GoonRuntime::new(context2);
 
     let code_video = r#"
         (async () => {
