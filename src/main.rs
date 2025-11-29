@@ -1,7 +1,8 @@
 use anyhow::Result;
 use goon_ai::core::app::App;
 
-fn main() -> Result<()> {
+#[tokio::main]
+async fn main() -> Result<()> {
     // Initialize logging (simple print for now, can be enhanced later)
     println!("Starting goon.ai...");
 
@@ -9,7 +10,7 @@ fn main() -> Result<()> {
     let app = App::new()?;
 
     // Run App
-    app.run()?;
+    app.run().await?;
 
     Ok(())
 }

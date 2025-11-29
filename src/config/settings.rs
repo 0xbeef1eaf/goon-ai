@@ -22,6 +22,12 @@ pub struct User {
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct LLMSettings {
     pub host: String,
+    #[serde(default = "default_model")]
+    pub model: String,
+}
+
+fn default_model() -> String {
+    "llama3".to_string()
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]

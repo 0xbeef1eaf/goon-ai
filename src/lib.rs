@@ -1,3 +1,4 @@
+pub mod app_loop;
 pub mod assets;
 pub mod config;
 pub mod core;
