@@ -1,4 +1,5 @@
-use crate::sdk::metadata;
+use crate::sdk::{metadata, analysis};
+use std::path::Path;
 
 pub fn generate_definitions(allowed_modules: &[String]) -> String {
     let all_modules = metadata::get_modules();
@@ -17,7 +18,19 @@ pub fn generate_definitions(allowed_modules: &[String]) -> String {
 
         if include {
             definitions.push_str(&format!("\n// Module: {}\n", module.name));
-            definitions.push_str(module.template);
+            definitions.push_str(&module.template);
+            
+            // Analyze source file for ops if it exists
+            let source_path = format!("src/sdk/{}.rs", module.name);
+            if Path::new(&source_path).exists() {
+                let ops = analysis::analyze_source(Path::new(&source_path));
+                for op in ops {
+                    // This is where we could auto-generate the function signature
+                    // For now, we rely on the template, but we could verify or append here
+                    // definitions.push_str(&format!("// Found op: {}\n", op.name));
+                }
+            }
+            
             definitions.push('\n');
         }
     }

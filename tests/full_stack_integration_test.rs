@@ -4,6 +4,23 @@ use goon_ai::assets::types::Asset;
 use goon_ai::config::pack::{Asset as ConfigAsset, Assets, Mood, PackConfig, PackMeta};
 use goon_ai::permissions::{Permission, PermissionChecker, PermissionResolver, PermissionSet};
 use goon_ai::runtime::GoonRuntime;
+use goon_ai::gui::window_manager::{GuiInterface, WindowHandle, WindowOptions};
+use goon_ai::gui::content::ContentConstructor;
+use anyhow::Result;
+
+struct MockGuiController;
+
+impl GuiInterface for MockGuiController {
+    fn create_window(&self, _options: WindowOptions) -> Result<WindowHandle> {
+        Ok(WindowHandle(uuid::Uuid::new_v4()))
+    }
+    fn close_window(&self, _handle: WindowHandle) -> Result<()> {
+        Ok(())
+    }
+    fn set_content(&self, _handle: WindowHandle, _content: Box<dyn ContentConstructor>) -> Result<()> {
+        Ok(())
+    }
+}
 
 #[tokio::test]
 async fn test_asset_loading_to_permission_check() {
@@ -11,7 +28,7 @@ async fn test_asset_loading_to_permission_check() {
     // Pack: Requests Image and Video permissions. Contains Image and Video assets.
     let pack_config = PackConfig {
         meta: PackMeta {
-            name: "FullStackPack".to_string(),
+            name: "TestPack".to_string(),
             version: "1.0.0".to_string(),
             permissions: vec![Permission::Image, Permission::Video],
         },
@@ -22,11 +39,11 @@ async fn test_asset_loading_to_permission_check() {
         }],
         assets: Assets {
             image: Some(vec![ConfigAsset {
-                path: "img/test.jpg".to_string(),
+                path: "image/beach.jpg".to_string(),
                 tags: vec!["default".to_string()],
             }]),
             video: Some(vec![ConfigAsset {
-                path: "vid/test.mp4".to_string(),
+                path: "video/test-bunny.mp4".to_string(),
                 tags: vec!["default".to_string()],
             }]),
             audio: None,
@@ -40,8 +57,8 @@ async fn test_asset_loading_to_permission_check() {
     user_perms.add(Permission::Image);
 
     // 2. Load Assets
-    // This creates the registry with paths relative to "packs/FullStackPack"
-    let registry = AssetLoader::load(&pack_config, "FullStackPack").expect("Failed to load assets");
+    // This creates the registry with paths relative to "packs/TestPack"
+    let registry = AssetLoader::load(&pack_config, "TestPack").expect("Failed to load assets");
 
     // 3. Resolve Permissions
     let pack_perms: PermissionSet = pack_config.meta.permissions.clone().into();
@@ -81,22 +98,25 @@ async fn test_asset_loading_to_permission_check() {
 
     // 5. Runtime Execution
     // We use the checker derived from the resolution step.
-    let mut runtime = GoonRuntime::new(checker.clone());
+    
+    // Mock GuiController
+    let gui_controller = std::sync::Arc::new(MockGuiController);
+    let registry_arc = std::sync::Arc::new(registry);
+    let mood_clone = mood.clone();
+
+    let mut runtime = GoonRuntime::new(checker.clone(), gui_controller.clone(), registry_arc.clone(), mood_clone.clone());
 
     // A. Attempt to show the selected Image (Permission Granted)
     // We inject the selected path into the JS code, simulating the LLM using a path provided by the system (or known to it).
-    let code_image = format!(
-        r#"
-        (async () => {{
-            try {{
-                await goon.image.show("{}", {{}});
-            }} catch (e) {{
+    let code_image = r#"
+        (async () => {
+            try {
+                await goon.image.show({ tags: ["default"] });
+            } catch (e) {
                 throw new Error("Image show failed: " + e.message);
-            }}
-        }})()
-    "#,
-        image_path.replace("\\", "/")
-    ); // Handle Windows paths if necessary
+            }
+        })()
+    "#;
 
     let result = runtime.execute_script(&code_image).await;
     assert!(
@@ -107,16 +127,13 @@ async fn test_asset_loading_to_permission_check() {
 
     // B. Attempt to show the selected Video (Permission Denied)
     // Create a new runtime to avoid module name collision
-    let mut runtime2 = GoonRuntime::new(checker.clone());
+    let mut runtime2 = GoonRuntime::new(checker.clone(), gui_controller.clone(), registry_arc.clone(), mood_clone.clone());
 
-    let code_video = format!(
-        r#"
-        (async () => {{
-            await goon.video.show("{}", {{}});
-        }})()
-    "#,
-        video_path.replace("\\", "/")
-    );
+    let code_video = r#"
+        (async () => {
+            await goon.video.show({ tags: ["default"] });
+        })()
+    "#;
 
     let result = runtime2.execute_script(&code_video).await;
     assert!(

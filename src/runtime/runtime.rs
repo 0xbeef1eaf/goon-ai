@@ -1,4 +1,6 @@
-use crate::gui::window_manager::GuiController;
+use crate::assets::registry::AssetRegistry;
+use crate::config::pack::Mood;
+use crate::gui::window_manager::GuiInterface;
 use crate::permissions::PermissionChecker;
 use crate::sdk;
 use crate::sdk::{
@@ -8,14 +10,19 @@ use crate::sdk::{
 use crate::typescript::TypeScriptCompiler;
 use anyhow::Result;
 use deno_core::{JsRuntime, ModuleSpecifier, RuntimeOptions};
-use std::rc::Rc;
+use std::sync::Arc;
 
 pub struct GoonRuntime {
     js_runtime: JsRuntime,
 }
 
 impl GoonRuntime {
-    pub fn new(permissions: PermissionChecker, gui_controller: GuiController) -> Self {
+    pub fn new(
+        permissions: PermissionChecker,
+        gui_controller: Arc<dyn GuiInterface>,
+        registry: Arc<AssetRegistry>,
+        mood: Mood,
+    ) -> Self {
         let mut js_runtime = JsRuntime::new(RuntimeOptions {
             extensions: vec![
                 goon_system::init(),
@@ -36,6 +43,8 @@ impl GoonRuntime {
             let mut op_state = op_state.borrow_mut();
             op_state.put(permissions);
             op_state.put(gui_controller);
+            op_state.put(registry);
+            op_state.put(mood);
         }
 
         // Compile and load SDK bridge code
@@ -78,6 +87,22 @@ impl GoonRuntime {
 mod tests {
     use super::*;
     use crate::permissions::{Permission, PermissionChecker, PermissionSet};
+    use crate::gui::window_manager::{GuiInterface, WindowHandle, WindowOptions};
+    use crate::gui::content::ContentConstructor;
+
+    struct MockGuiController;
+
+    impl GuiInterface for MockGuiController {
+        fn create_window(&self, _options: WindowOptions) -> Result<WindowHandle> {
+            Ok(WindowHandle(uuid::Uuid::new_v4()))
+        }
+        fn close_window(&self, _handle: WindowHandle) -> Result<()> {
+            Ok(())
+        }
+        fn set_content(&self, _handle: WindowHandle, _content: Box<dyn ContentConstructor>) -> Result<()> {
+            Ok(())
+        }
+    }
 
     #[tokio::test]
     async fn test_runtime_execution() {
@@ -85,19 +110,18 @@ mod tests {
         set.add(Permission::Image);
         let permissions = PermissionChecker::new(set);
 
-        // Mock GuiController
-        let event_loop =
-            winit::event_loop::EventLoop::<crate::gui::event_loop::GuiCommand>::with_user_event()
-                .build()
-                .unwrap();
-        let proxy = event_loop.create_proxy();
-        let gui_controller = GuiController::new(proxy);
-
-        let mut runtime = GoonRuntime::new(permissions, gui_controller);
+        let gui_controller = Arc::new(MockGuiController);
+        let registry = Arc::new(AssetRegistry::new());
+        let mood = Mood {
+            name: "Test".to_string(),
+            description: "".to_string(),
+            tags: vec![],
+        };
+        let mut runtime = GoonRuntime::new(permissions, gui_controller, registry, mood);
 
         let code = r#"
             goon.system.log("Hello from JS");
-            // const handle = await goon.image.show("test.png", {}); // This would fail without real window manager
+            // const handle = await goon.image.show({ tags: ["test"] }); // This would fail without real window manager
             // goon.system.log("Image handle: " + handle);
         "#;
 
@@ -110,18 +134,17 @@ mod tests {
         let set = PermissionSet::new(); // No permissions
         let permissions = PermissionChecker::new(set);
 
-        // Mock GuiController
-        let event_loop =
-            winit::event_loop::EventLoop::<crate::gui::event_loop::GuiCommand>::with_user_event()
-                .build()
-                .unwrap();
-        let proxy = event_loop.create_proxy();
-        let gui_controller = GuiController::new(proxy);
-
-        let mut runtime = GoonRuntime::new(permissions, gui_controller);
+        let gui_controller = Arc::new(MockGuiController);
+        let registry = Arc::new(AssetRegistry::new());
+        let mood = Mood {
+            name: "Test".to_string(),
+            description: "".to_string(),
+            tags: vec![],
+        };
+        let mut runtime = GoonRuntime::new(permissions, gui_controller, registry, mood);
 
         let code = r#"
-            await goon.image.show("test.png", {});
+            await goon.image.show({ tags: ["test"] });
         "#;
 
         let result = runtime.execute_script(code).await;

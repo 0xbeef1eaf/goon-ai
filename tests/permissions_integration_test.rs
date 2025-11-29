@@ -1,6 +1,23 @@
 use goon_ai::permissions::{Permission, PermissionChecker, PermissionResolver, PermissionSet};
 use goon_ai::runtime::GoonRuntime;
 use goon_ai::sdk::generate_definitions_for_permissions;
+use goon_ai::gui::window_manager::{GuiInterface, WindowHandle, WindowOptions};
+use goon_ai::gui::content::ContentConstructor;
+use anyhow::Result;
+
+struct MockGuiController;
+
+impl GuiInterface for MockGuiController {
+    fn create_window(&self, _options: WindowOptions) -> Result<WindowHandle> {
+        Ok(WindowHandle(uuid::Uuid::new_v4()))
+    }
+    fn close_window(&self, _handle: WindowHandle) -> Result<()> {
+        Ok(())
+    }
+    fn set_content(&self, _handle: WindowHandle, _content: Box<dyn ContentConstructor>) -> Result<()> {
+        Ok(())
+    }
+}
 
 #[tokio::test]
 async fn test_full_permission_flow() {
@@ -25,13 +42,23 @@ async fn test_full_permission_flow() {
 
     // 3. Initialize Runtime with Resolved Permissions
     let checker = PermissionChecker::new(active_perms.clone());
-    let mut runtime = GoonRuntime::new(checker.clone());
+    
+    // Mock GuiController
+    let gui_controller = std::sync::Arc::new(MockGuiController);
+    let registry = std::sync::Arc::new(goon_ai::assets::registry::AssetRegistry::new());
+    let mood = goon_ai::config::pack::Mood {
+        name: "Test".to_string(),
+        description: "".to_string(),
+        tags: vec![],
+    };
+
+    let mut runtime = GoonRuntime::new(checker.clone(), gui_controller.clone(), registry.clone(), mood.clone());
 
     // 4. Test Allowed Operation (Image)
     let allowed_code = r#"
         (async () => {
             try {
-                await goon.image.show("test.png", {});
+                await goon.image.show({ tags: ["default"] });
                 return "success";
             } catch (e) {
                 return "failed: " + e.message;
@@ -53,11 +80,11 @@ async fn test_full_permission_flow() {
 
     // 5. Test Denied Operation (Video)
     // Create a new runtime instance to avoid module name collision ("main.js")
-    let mut runtime2 = GoonRuntime::new(checker.clone());
+    let mut runtime2 = GoonRuntime::new(checker.clone(), gui_controller.clone(), registry.clone(), mood.clone());
 
     let denied_code = r#"
         (async () => {
-            await goon.video.show("test.mp4", {});
+            await goon.video.show({ tags: ["default"] });
         })()
     "#;
 

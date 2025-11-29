@@ -1,8 +1,12 @@
-use crate::gui::window_manager::GuiController;
+use crate::assets::registry::AssetRegistry;
+use crate::config::pack::Mood;
+use crate::gui::window_manager::GuiInterface;
 use crate::permissions::PermissionChecker;
 use crate::runtime::GoonRuntime;
 use crate::typescript::TypeScriptCompiler;
 use anyhow::Result;
+
+use std::sync::Arc;
 
 pub struct Executor {
     compiler: TypeScriptCompiler,
@@ -25,10 +29,12 @@ impl Executor {
         &self,
         ts_code: &str,
         permissions: PermissionChecker,
-        gui_controller: GuiController,
+        gui_controller: Arc<dyn GuiInterface>,
+        registry: Arc<AssetRegistry>,
+        mood: Mood,
     ) -> Result<()> {
         let js_code = self.compiler.compile(ts_code)?;
-        let mut runtime = GoonRuntime::new(permissions, gui_controller);
+        let mut runtime = GoonRuntime::new(permissions, gui_controller, registry, mood);
         runtime.execute_script(&js_code).await?;
         Ok(())
     }
@@ -38,6 +44,22 @@ impl Executor {
 mod tests {
     use super::*;
     use crate::permissions::{PermissionChecker, PermissionSet};
+    use crate::gui::window_manager::{GuiInterface, WindowHandle, WindowOptions};
+    use crate::gui::content::ContentConstructor;
+
+    struct MockGuiController;
+
+    impl GuiInterface for MockGuiController {
+        fn create_window(&self, _options: WindowOptions) -> Result<WindowHandle> {
+            Ok(WindowHandle(uuid::Uuid::new_v4()))
+        }
+        fn close_window(&self, _handle: WindowHandle) -> Result<()> {
+            Ok(())
+        }
+        fn set_content(&self, _handle: WindowHandle, _content: Box<dyn ContentConstructor>) -> Result<()> {
+            Ok(())
+        }
+    }
 
     #[tokio::test]
     async fn test_executor_run() {
@@ -45,17 +67,18 @@ mod tests {
         let set = PermissionSet::new();
         let permissions = PermissionChecker::new(set);
 
-        let event_loop =
-            winit::event_loop::EventLoop::<crate::gui::event_loop::GuiCommand>::with_user_event()
-                .build()
-                .unwrap();
-        let proxy = event_loop.create_proxy();
-        let gui_controller = GuiController::new(proxy);
+        let gui_controller = Arc::new(MockGuiController);
+        let registry = Arc::new(AssetRegistry::new());
+        let mood = Mood {
+            name: "Test".to_string(),
+            description: "".to_string(),
+            tags: vec![],
+        };
 
         let code = r#"
             goon.system.log("Executor test");
         "#;
-        let result = executor.execute(code, permissions, gui_controller).await;
+        let result = executor.execute(code, permissions, gui_controller, registry, mood).await;
         assert!(result.is_ok());
     }
 
@@ -65,15 +88,16 @@ mod tests {
         let set = PermissionSet::new();
         let permissions = PermissionChecker::new(set);
 
-        let event_loop =
-            winit::event_loop::EventLoop::<crate::gui::event_loop::GuiCommand>::with_user_event()
-                .build()
-                .unwrap();
-        let proxy = event_loop.create_proxy();
-        let gui_controller = GuiController::new(proxy);
+        let gui_controller = Arc::new(MockGuiController);
+        let registry = Arc::new(AssetRegistry::new());
+        let mood = Mood {
+            name: "Test".to_string(),
+            description: "".to_string(),
+            tags: vec![],
+        };
 
         let code = "const x: number = ;"; // Invalid syntax
-        let result = executor.execute(code, permissions, gui_controller).await;
+        let result = executor.execute(code, permissions, gui_controller, registry, mood).await;
         assert!(result.is_err());
     }
 }

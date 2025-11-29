@@ -164,3 +164,9 @@ Editing Cargo.toml or Cargo.lock directly is bad behaviour, always use command l
 
 All changes must be made to a new branch
 PRs must not be created
+You should check the code with
+```
+cargo test
+cargo clippy -- -D warnings
+cargo check
+```

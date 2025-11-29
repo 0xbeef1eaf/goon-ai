@@ -56,17 +56,19 @@ impl Default for WindowOptions {
 
 use super::content::ContentConstructor;
 
+pub trait GuiInterface: Send + Sync {
+    fn create_window(&self, options: WindowOptions) -> Result<WindowHandle>;
+    fn close_window(&self, handle: WindowHandle) -> Result<()>;
+    fn set_content(&self, handle: WindowHandle, content: Box<dyn ContentConstructor>) -> Result<()>;
+}
+
 #[derive(Clone)]
 pub struct GuiController {
     proxy: EventLoopProxy<GuiCommand>,
 }
 
-impl GuiController {
-    pub fn new(proxy: EventLoopProxy<GuiCommand>) -> Self {
-        Self { proxy }
-    }
-
-    pub fn create_window(&self, options: WindowOptions) -> Result<WindowHandle> {
+impl GuiInterface for GuiController {
+    fn create_window(&self, options: WindowOptions) -> Result<WindowHandle> {
         let (tx, rx) = channel();
         self.proxy
             .send_event(GuiCommand::CreateWindow(options, tx))
@@ -75,14 +77,14 @@ impl GuiController {
             .map_err(|_| anyhow::anyhow!("Failed to receive response"))?
     }
 
-    pub fn close_window(&self, handle: WindowHandle) -> Result<()> {
+    fn close_window(&self, handle: WindowHandle) -> Result<()> {
         self.proxy
             .send_event(GuiCommand::CloseWindow(handle))
             .map_err(|_| anyhow::anyhow!("Event loop closed"))?;
         Ok(())
     }
 
-    pub fn set_content(
+    fn set_content(
         &self,
         handle: WindowHandle,
         content: Box<dyn ContentConstructor>,
@@ -91,6 +93,12 @@ impl GuiController {
             .send_event(GuiCommand::SetContent(handle, content))
             .map_err(|_| anyhow::anyhow!("Event loop closed"))?;
         Ok(())
+    }
+}
+
+impl GuiController {
+    pub fn new(proxy: EventLoopProxy<GuiCommand>) -> Self {
+        Self { proxy }
     }
 }
 

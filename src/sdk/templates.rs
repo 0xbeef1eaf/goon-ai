@@ -1,29 +1,32 @@
-pub const TYPES_TS: &str = r#"
+use crate::sdk::{image, video, audio, wallpaper, prompt, website, types};
+use ts_rs::TS;
+
+pub fn types_ts() -> String {
+    let position_decl = types::Position::decl();
+    let size_decl = types::Size::decl();
+    let window_options_decl = types::WindowOptions::decl();
+    
+    format!(r#"
 /**
  * Base window handle interface
  */
-interface WindowHandle {
+interface WindowHandle {{
     /**
      * Closes the window.
      */
     close(): Promise<void>;
-}
-/**
- * Position and dimensions for window placement
- */
-interface Position {
-    /** X coordinate in pixels */
-    x: number;
-    /** Y coordinate in pixels */
-    y: number;
-    /** Width in pixels */
-    width: number;
-    /** Height in pixels */
-    height: number;
-}
-"#;
+}}
 
-pub const PACK_TS: &str = r#"
+{}
+
+{}
+
+{}
+"#, position_decl, size_decl, window_options_decl)
+}
+
+pub fn pack_ts() -> String {
+    r#"
 /**
  * Mood information
  */
@@ -70,49 +73,14 @@ class pack {
      */
     static async setMood(mood_name: string): Promise<void>;
 }
-"#;
-
-pub const IMAGE_TS: &str = r#"
-interface ImageOptions {
-    /**
-     * Additional tags to filter images by, beyond the mood's tags.
-     * Images must match the mood tags AND any specified tags.
-     */
-    tags?: string[];
-
-    /**
-     * Coordinates and dimensions for displaying the image.
-     * All values are in pixels.
-     * If omitted, defaults to the image with its original dimensions randomly placed on the screen.
-     * Will be clamped to fit within the screen bounds.
-     * Will maintain aspect ratio of the image, by adjusting width or height as necessary.
-     */
-    position?: {
-        x: number;
-        y: number;
-        width: number;
-        height: number;
-    };
-
-    /**
-     * Whether the window can be closed by the user.
-     * Default: true
-     */
-    closable?: boolean;
-
-    /**
-     * Opacity of the window, from 0 (transparent) to 1 (opaque).
-     * Default: 1
-     */
-    opacity?: number;
-
-    /**
-     * Time in milliseconds before the window automatically closes.
-     * Default: no timeout
-     */
-    timeout?: number;
+"#.to_string()
 }
-interface ImageHandle extends WindowHandle {
+
+pub fn image_ts() -> String {
+    let options_interface = image::ImageOptions::decl();
+    format!(r#"
+{}
+interface ImageHandle extends WindowHandle {{
     /**
      * Sets the opacity of the image window, from 0 (transparent) to 1 (opaque).
      */
@@ -128,112 +96,60 @@ interface ImageHandle extends WindowHandle {
      * Maintains aspect ratio if needed.
      */
     resize(width: number, height: number): Promise<void>;
-}
+}}
 /**
  * Image display functions
  */
-class image {
+class image {{
     /**
      * Display an image from the pack's assets.
      * The image is automatically selected based on current mood and optional tags.
      */
     static async show(options: ImageOptions): Promise<ImageHandle>;
+}}
+"#, options_interface)
 }
-"#;
 
-pub const VIDEO_TS: &str = r#"
-interface VideoOptions {
-    /**
-     * Additional tags to filter videos by, beyond the mood's tags.
-     */
-    tags?: string[];
-
-    /**
-     * Coordinates and dimensions for displaying the video.
-     */
-    position?: {
-        x: number;
-        y: number;
-        width: number;
-        height: number;
-    };
-
-    /**
-     * Whether the window can be closed by the user.
-     * Default: true
-     */
-    closable?: boolean;
-
-    /**
-     * Opacity of the window, from 0 (transparent) to 1 (opaque).
-     * Default: 1
-     */
-    opacity?: number;
-
-    /**
-     * Time in milliseconds before the window automatically closes.
-     * Default: no timeout
-     */
-    timeout?: number;
-
-    /**
-     * Volume level from 0 (muted) to 1 (maximum).
-     * Default: 1
-     */
-    volume?: number;
-
-    /**
-     * Whether to loop the video.
-     * Default: false
-     */
-    loop?: boolean;
-}
-interface VideoHandle extends WindowHandle {
+pub fn video_ts() -> String {
+    let options_interface = video::VideoOptions::decl();
+    format!(r#"
+{}
+interface VideoHandle extends WindowHandle {{
     setOpacity(opacity: number): Promise<void>;
     moveTo(x: number, y: number): Promise<void>;
     resize(width: number, height: number): Promise<void>;
     setVolume(volume: number): Promise<void>;
     loop(loop: boolean): Promise<void>;
-}
-class video {
+}}
+class video {{
     static async play(options: VideoOptions): Promise<VideoHandle>;
+}}
+"#, options_interface)
 }
-"#;
 
-pub const AUDIO_TS: &str = r#"
-interface AudioOptions {
-    /**
-     * Additional tags to filter audio by, beyond the mood's tags.
-     */
-    tags?: string[];
-
-    /**
-     * Volume level from 0 (muted) to 1 (maximum).
-     * Default: 1
-     */
-    volume?: number;
-
-    /**
-     * Whether to loop the audio.
-     * Default: false
-     */
-    loop?: boolean;
-}
-interface AudioHandle {
+pub fn audio_ts() -> String {
+    let options_interface = audio::AudioOptions::decl();
+    format!(r#"
+{}
+interface AudioHandle {{
     stop(): Promise<void>;
     setVolume(volume: number): Promise<void>;
     loop(loop: boolean): Promise<void>;
-}
-class audio {
+}}
+class audio {{
     static async play(options: AudioOptions): Promise<AudioHandle>;
+}}
+"#, options_interface)
 }
-"#;
 
-pub const PROMPT_TS: &str = r#"
+pub fn prompt_ts() -> String {
+    let options_interface = prompt::PromptOptions::decl();
+    format!(r#"
 /**
  * Text prompt with optional image display
  */
-class textPrompt {
+{}
+class textPrompt {{
     /**
      * Displays a text prompt in a window, with optional image.
      * The window will close when the user has copied the text into the prompt window.
@@ -257,18 +173,22 @@ class textPrompt {
      * // Text prompt with mood-based image
      * await textPrompt.show(
      *   "Focus on this image and breathe slowly...",
-     *   { tags: ['calming', 'nature'], opacity: 0.9 }
+     *   {{ tags: ['calming', 'nature'], opacity: 0.9 }}
      * );
      */
-    static async show(text: string, image?: ImageOptions): Promise<WindowHandle>;
+    static async show(options: PromptOptions): Promise<WindowHandle>;
+}}
+"#, options_interface)
 }
-"#;
 
-pub const WALLPAPER_TS: &str = r#"
+pub fn wallpaper_ts() -> String {
+    let options_interface = wallpaper::WallpaperOptions::decl();
+    format!(r#"
+{}
 /**
  * Desktop wallpaper functions
  */
-class wallpaper {
+class wallpaper {{
     /**
      * Sets the desktop wallpaper to an image matching the specified mood and tags.
      * The image is automatically selected based on:
@@ -285,15 +205,19 @@ class wallpaper {
      * // Set wallpaper with specific tags
      * await wallpaper.set(['mountain', 'sunset']);
      */
-    static async set(tags?: string[]): Promise<void>;
+    static async set(options: WallpaperOptions): Promise<void>;
+}}
+"#, options_interface)
 }
-"#;
 
-pub const WEBSITE_TS: &str = r#"
+pub fn website_ts() -> String {
+    let options_interface = website::WebsiteOptions::decl();
+    format!(r#"
+{}
 /**
  * Web browser functions
  */
-class website {
+class website {{
     /**
      * Opens a website in the default browser matching the specified mood and tags.
      * Websites are defined in the pack configuration and filtered by:
@@ -310,6 +234,7 @@ class website {
      * // Open conservation-related website
      * await website.open(['conservation', 'nature']);
      */
-    static async open(tags?: string[]): Promise<void>;
+    static async open(options: WebsiteOptions): Promise<void>;
+}}
+"#, options_interface)
 }
-"#;

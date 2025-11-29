@@ -24,7 +24,7 @@ impl ContentConstructor for ImageContent {
             renderer.animation_state = Some(AnimationState {
                 animation: anim.clone(), // Clone animation data
                 current_frame: 0,
-                next_frame_time: Instant::now(),
+                next_frame_time: Instant::now() + first_frame.delay,
             });
             return Ok(Box::new(renderer));
         }
