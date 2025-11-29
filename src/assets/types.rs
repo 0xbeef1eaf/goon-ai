@@ -10,17 +10,19 @@ pub enum Asset {
     Audio(AudioAsset),
     Hypno(HypnoAsset),
     Wallpaper(WallpaperAsset),
+    Website(WebsiteAsset),
 }
 
 impl Asset {
     #[allow(dead_code)]
-    pub fn get_path(&self) -> &PathBuf {
+    pub fn get_path(&self) -> Option<&PathBuf> {
         match self {
-            Asset::Image(a) => &a.path,
-            Asset::Video(a) => &a.path,
-            Asset::Audio(a) => &a.path,
-            Asset::Hypno(a) => &a.path,
-            Asset::Wallpaper(a) => &a.path,
+            Asset::Image(a) => Some(&a.path),
+            Asset::Video(a) => Some(&a.path),
+            Asset::Audio(a) => Some(&a.path),
+            Asset::Hypno(a) => Some(&a.path),
+            Asset::Wallpaper(a) => Some(&a.path),
+            Asset::Website(_) => None,
         }
     }
 
@@ -32,6 +34,7 @@ impl Asset {
             Asset::Audio(a) => &a.tags,
             Asset::Hypno(a) => &a.tags,
             Asset::Wallpaper(a) => &a.tags,
+            Asset::Website(a) => &a.tags,
         }
     }
 
@@ -80,5 +83,14 @@ pub struct HypnoAsset {
 #[allow(dead_code)]
 pub struct WallpaperAsset {
     pub path: PathBuf,
+    pub tags: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+#[allow(dead_code)]
+pub struct WebsiteAsset {
+    pub name: String,
+    pub url: String,
+    pub description: String,
     pub tags: Vec<String>,
 }

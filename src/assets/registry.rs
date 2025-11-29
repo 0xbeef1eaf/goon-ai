@@ -8,6 +8,7 @@ pub struct AssetRegistry {
     pub audio: Vec<Asset>,
     pub hypnos: Vec<Asset>,
     pub wallpapers: Vec<Asset>,
+    pub websites: Vec<Asset>,
 }
 
 impl AssetRegistry {
@@ -24,6 +25,7 @@ impl AssetRegistry {
             Asset::Audio(_) => self.audio.push(asset),
             Asset::Hypno(_) => self.hypnos.push(asset),
             Asset::Wallpaper(_) => self.wallpapers.push(asset),
+            Asset::Website(_) => self.websites.push(asset),
         }
     }
 }

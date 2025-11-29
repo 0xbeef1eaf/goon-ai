@@ -48,6 +48,7 @@ fn test_asset_flow_from_config_to_selection() {
             hypno: None,
             wallpaper: None,
         },
+        websites: None,
     };
 
     // 2. Load Assets

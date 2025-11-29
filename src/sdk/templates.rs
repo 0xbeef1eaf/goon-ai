@@ -1,4 +1,4 @@
-use crate::sdk::{audio, image, prompt, types, video, wallpaper, website};
+use crate::sdk::{audio, image, prompt, types, video, wallpaper};
 use ts_rs::TS;
 
 pub fn types_ts() -> String {
@@ -230,33 +230,35 @@ class wallpaper {{
 }
 
 pub fn website_ts() -> String {
-    let options_interface = website::WebsiteOptions::decl();
-    format!(
-        r#"
-{}
+    r#"
 /**
  * Web browser functions
  */
-class website {{
+class website {
     /**
-     * Opens a website in the default browser matching the specified mood and tags.
-     * Websites are defined in the pack configuration and filtered by:
-     * 1. Current mood's tags
-     * 2. Additional tags specified (if any)
+     * Open a website using a query string.
      *
-     * @param tags Optional tags to filter websites
+     * Query formats:
+     * - "name:Website Name" - Open by name from pack
+     * - "tag:tag1,tag2" - Open random website with tags
+     * - "https://example.com" - Open direct URL
      *
-     * @example
-     * // Open website from current mood
-     * await website.open();
+     * @param query The query string to determine which website to open
      *
      * @example
-     * // Open conservation-related website
-     * await website.open(['conservation', 'nature']);
+     * // Open pack-defined website by name
+     * await website.open("name:Nature Conservancy");
+     *
+     * @example
+     * // Open random website with tag
+     * await website.open("tag:conservation");
+     *
+     * @example
+     * // Open direct URL
+     * await website.open("https://example.com");
      */
-    static async open(options: WebsiteOptions): Promise<void>;
-}}
-"#,
-        options_interface
-    )
+    static async open(query: string): Promise<void>;
+}
+"#
+    .to_string()
 }

@@ -45,6 +45,20 @@ impl PromptBuilder {
         system_content.push_str("// SDK definitions will go here\n");
         system_content.push_str("```\n\n");
 
+        // 3.1 Available Websites (if any)
+        if let Some(websites) = pack_config.websites.as_ref().filter(|w| !w.is_empty()) {
+            system_content.push_str("# Available Websites\n");
+            for site in websites {
+                system_content.push_str(&format!(
+                    "- **{}**: {} (Tags: {})\n",
+                    site.name,
+                    site.description,
+                    site.tags.join(", ")
+                ));
+            }
+            system_content.push('\n');
+        }
+
         // 4. User Profile
         system_content.push_str("# User Profile\n");
         system_content.push_str(&format!("Name: {}\n", user.name));
@@ -98,6 +112,7 @@ mod tests {
                 hypno: None,
                 wallpaper: None,
             },
+            websites: None,
         }
     }
 
@@ -107,6 +122,32 @@ mod tests {
             dob: "1990-01-01".to_string(),
             gender: "Non-binary".to_string(),
         }
+    }
+
+    #[test]
+    fn test_prompt_builder_with_websites() {
+        use crate::config::pack::WebsiteConfig;
+
+        let mut pack_config = create_dummy_pack_config();
+        pack_config.websites = Some(vec![WebsiteConfig {
+            name: "TestSite".to_string(),
+            url: "https://example.com".to_string(),
+            description: "A test website".to_string(),
+            tags: vec!["test".to_string()],
+        }]);
+
+        let user = create_dummy_user();
+        let history = ConversationManager::new(10);
+
+        let messages = PromptBuilder::build(&pack_config, "Happy", &user, &history);
+        let system_msg = &messages[0];
+
+        assert!(system_msg.content.contains("# Available Websites"));
+        assert!(
+            system_msg
+                .content
+                .contains("- **TestSite**: A test website (Tags: test)")
+        );
     }
 
     #[test]

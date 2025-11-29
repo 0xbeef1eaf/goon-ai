@@ -28,7 +28,7 @@ pub fn get_all_typescript_sources() -> Vec<String> {
         hypno::TS_SOURCE.to_string(),
         wallpaper::get_source(),
         prompt::TS_SOURCE.to_string(),
-        website::TS_SOURCE.to_string(),
+        website::get_source(),
         system::TS_SOURCE.to_string(),
     ]
 }

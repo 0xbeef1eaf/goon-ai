@@ -39,6 +39,11 @@ impl<'a> AssetSelector<'a> {
         self.select_from(&self.registry.wallpapers, mood, tags)
     }
 
+    #[allow(dead_code)]
+    pub fn select_website(&self, mood: &Mood, tags: &[String]) -> Option<&Asset> {
+        self.select_from(&self.registry.websites, mood, tags)
+    }
+
     fn select_from(&self, assets: &'a [Asset], mood: &Mood, tags: &[String]) -> Option<&'a Asset> {
         let mood_tags = &mood.tags;
 
@@ -117,7 +122,10 @@ mod tests {
         // Should only match img1 (nature, calm)
         let asset = selector.select_image(&mood, &[]);
         assert!(asset.is_some());
-        assert_eq!(asset.unwrap().get_path().to_str().unwrap(), "img1.jpg");
+        assert_eq!(
+            asset.unwrap().get_path().unwrap().to_str().unwrap(),
+            "img1.jpg"
+        );
     }
 
     #[test]
@@ -134,7 +142,7 @@ mod tests {
         // Request "busy" -> matches img2 and img3
         let asset = selector.select_image(&mood, &["busy".to_string()]);
         assert!(asset.is_some());
-        let path = asset.unwrap().get_path().to_str().unwrap();
+        let path = asset.unwrap().get_path().unwrap().to_str().unwrap();
         assert!(path == "img2.jpg" || path == "img3.jpg");
     }
 
@@ -152,7 +160,10 @@ mod tests {
         // Mood "nature" (img1, img3) AND Request "busy" (img2, img3) -> Intersection is img3
         let asset = selector.select_image(&mood, &["busy".to_string()]);
         assert!(asset.is_some());
-        assert_eq!(asset.unwrap().get_path().to_str().unwrap(), "img3.jpg");
+        assert_eq!(
+            asset.unwrap().get_path().unwrap().to_str().unwrap(),
+            "img3.jpg"
+        );
     }
 
     #[test]
