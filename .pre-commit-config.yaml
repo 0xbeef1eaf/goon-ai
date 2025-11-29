@@ -20,5 +20,4 @@ repos:
         args: ["--", "-D", "warnings"]
 
 ci:
-  skip: [cargo-test]
   autofix_prs: true
