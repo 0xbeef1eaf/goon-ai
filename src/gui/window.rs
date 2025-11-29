@@ -1,14 +1,17 @@
+use super::content::{ContentConstructor, Renderable};
 use super::renderer::Renderer;
 use super::window_manager::WindowOptions;
 use anyhow::Result;
 use raw_window_handle::{HasWindowHandle, RawWindowHandle};
 use std::sync::Arc;
+use std::time::Instant;
 use winit::event_loop::ActiveEventLoop;
 use winit::window::{Window as WinitWindow, WindowAttributes};
 
 pub struct Window {
     pub winit_window: Arc<WinitWindow>,
     pub renderer: Option<Renderer>,
+    pub content_renderer: Option<Box<dyn Renderable>>,
     pub opacity: f32,
 }
 
@@ -38,9 +41,12 @@ impl Window {
 
         let winit_window = Arc::new(event_loop.create_window(attributes)?);
 
+        let renderer = pollster::block_on(Renderer::new(winit_window.clone()))?;
+
         Ok(Self {
             winit_window,
-            renderer: None,
+            renderer: Some(renderer),
+            content_renderer: None,
             opacity: options.opacity,
         })
     }
@@ -49,6 +55,59 @@ impl Window {
         let renderer = Renderer::new(self.winit_window.clone()).await?;
         self.renderer = Some(renderer);
         Ok(())
+    }
+
+    pub fn set_content(&mut self, content: Box<dyn ContentConstructor>) -> Result<()> {
+        if let Some(renderer) = &self.renderer {
+            let content_renderer =
+                content.create_renderer(&renderer.device, &renderer.queue, &renderer.config)?;
+            self.content_renderer = Some(content_renderer);
+        }
+        Ok(())
+    }
+
+    pub fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
+        let opacity = self.get_render_opacity();
+        if let Some(renderer) = &mut self.renderer {
+            // Update content
+            if let Some(content) = &mut self.content_renderer {
+                content.update(&renderer.queue);
+            }
+
+            let content_renderer = self.content_renderer.as_ref();
+
+            renderer.render(opacity, |encoder, view, queue| {
+                if let Some(cr) = content_renderer {
+                    cr.render(encoder, view, queue, opacity);
+                } else {
+                    // Clear pass
+                    let _render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                        label: Some("Render Pass"),
+                        color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                            view,
+                            resolve_target: None,
+                            ops: wgpu::Operations {
+                                load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
+                                store: wgpu::StoreOp::Store,
+                            },
+                        })],
+                        depth_stencil_attachment: None,
+                        occlusion_query_set: None,
+                        timestamp_writes: None,
+                    });
+                }
+            })?;
+        }
+        Ok(())
+    }
+
+    pub fn get_next_update_time(&mut self) -> Option<Instant> {
+        if let Some(renderer) = &self.renderer
+            && let Some(content) = &mut self.content_renderer
+        {
+            return content.update(&renderer.queue);
+        }
+        None
     }
 
     pub fn set_always_on_top(&self, always_on_top: bool) {

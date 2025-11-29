@@ -1,3 +1,4 @@
+pub mod content;
 pub mod event_loop;
 pub mod renderer;
 pub mod tests;

@@ -2,7 +2,7 @@ use crate::sdk::templates;
 
 pub struct SdkModule {
     pub name: &'static str,
-    pub template: &'static str,
+    pub template: String,
     pub permission: Option<&'static str>,
     pub dependencies: Vec<&'static str>,
 }
@@ -11,49 +11,49 @@ pub fn get_modules() -> Vec<SdkModule> {
     vec![
         SdkModule {
             name: "types",
-            template: templates::TYPES_TS,
+            template: templates::types_ts(),
             permission: None, // Always included
             dependencies: vec![],
         },
         SdkModule {
             name: "pack",
-            template: templates::PACK_TS,
+            template: templates::pack_ts(),
             permission: None, // Always included
             dependencies: vec!["types"],
         },
         SdkModule {
             name: "image",
-            template: templates::IMAGE_TS,
+            template: templates::image_ts(),
             permission: Some("image"),
             dependencies: vec!["types"],
         },
         SdkModule {
             name: "video",
-            template: templates::VIDEO_TS,
+            template: templates::video_ts(),
             permission: Some("video"),
             dependencies: vec!["types"],
         },
         SdkModule {
             name: "audio",
-            template: templates::AUDIO_TS,
+            template: templates::audio_ts(),
             permission: Some("audio"),
             dependencies: vec!["types"],
         },
         SdkModule {
             name: "textPrompt",
-            template: templates::PROMPT_TS,
+            template: templates::prompt_ts(),
             permission: Some("prompt"),
             dependencies: vec!["types", "image"],
         },
         SdkModule {
             name: "wallpaper",
-            template: templates::WALLPAPER_TS,
+            template: templates::wallpaper_ts(),
             permission: Some("wallpaper"),
             dependencies: vec![],
         },
         SdkModule {
             name: "website",
-            template: templates::WEBSITE_TS,
+            template: templates::website_ts(),
             permission: Some("website"),
             dependencies: vec![],
         },

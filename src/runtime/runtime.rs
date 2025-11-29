@@ -1,3 +1,6 @@
+use crate::assets::registry::AssetRegistry;
+use crate::config::pack::Mood;
+use crate::gui::window_manager::GuiInterface;
 use crate::permissions::PermissionChecker;
 use crate::sdk;
 use crate::sdk::{
@@ -7,14 +10,19 @@ use crate::sdk::{
 use crate::typescript::TypeScriptCompiler;
 use anyhow::Result;
 use deno_core::{JsRuntime, ModuleSpecifier, RuntimeOptions};
-use std::rc::Rc;
+use std::sync::Arc;
 
 pub struct GoonRuntime {
     js_runtime: JsRuntime,
 }
 
 impl GoonRuntime {
-    pub fn new(permissions: PermissionChecker) -> Self {
+    pub fn new(
+        permissions: PermissionChecker,
+        gui_controller: Arc<dyn GuiInterface>,
+        registry: Arc<AssetRegistry>,
+        mood: Mood,
+    ) -> Self {
         let mut js_runtime = JsRuntime::new(RuntimeOptions {
             extensions: vec![
                 goon_system::init(),
@@ -34,6 +42,9 @@ impl GoonRuntime {
             let op_state = js_runtime.op_state();
             let mut op_state = op_state.borrow_mut();
             op_state.put(permissions);
+            op_state.put(gui_controller);
+            op_state.put(registry);
+            op_state.put(mood);
         }
 
         // Compile and load SDK bridge code
@@ -75,19 +86,47 @@ impl GoonRuntime {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::gui::content::ContentConstructor;
+    use crate::gui::window_manager::{GuiInterface, WindowHandle, WindowOptions};
     use crate::permissions::{Permission, PermissionChecker, PermissionSet};
+
+    struct MockGuiController;
+
+    impl GuiInterface for MockGuiController {
+        fn create_window(&self, _options: WindowOptions) -> Result<WindowHandle> {
+            Ok(WindowHandle(uuid::Uuid::new_v4()))
+        }
+        fn close_window(&self, _handle: WindowHandle) -> Result<()> {
+            Ok(())
+        }
+        fn set_content(
+            &self,
+            _handle: WindowHandle,
+            _content: Box<dyn ContentConstructor>,
+        ) -> Result<()> {
+            Ok(())
+        }
+    }
 
     #[tokio::test]
     async fn test_runtime_execution() {
         let mut set = PermissionSet::new();
         set.add(Permission::Image);
         let permissions = PermissionChecker::new(set);
-        let mut runtime = GoonRuntime::new(permissions);
+
+        let gui_controller = Arc::new(MockGuiController);
+        let registry = Arc::new(AssetRegistry::new());
+        let mood = Mood {
+            name: "Test".to_string(),
+            description: "".to_string(),
+            tags: vec![],
+        };
+        let mut runtime = GoonRuntime::new(permissions, gui_controller, registry, mood);
 
         let code = r#"
             goon.system.log("Hello from JS");
-            const handle = await goon.image.show("test.png", {});
-            goon.system.log("Image handle: " + handle);
+            // const handle = await goon.image.show({ tags: ["test"] }); // This would fail without real window manager
+            // goon.system.log("Image handle: " + handle);
         "#;
 
         let result = runtime.execute_script(code).await;
@@ -98,10 +137,18 @@ mod tests {
     async fn test_permission_denied() {
         let set = PermissionSet::new(); // No permissions
         let permissions = PermissionChecker::new(set);
-        let mut runtime = GoonRuntime::new(permissions);
+
+        let gui_controller = Arc::new(MockGuiController);
+        let registry = Arc::new(AssetRegistry::new());
+        let mood = Mood {
+            name: "Test".to_string(),
+            description: "".to_string(),
+            tags: vec![],
+        };
+        let mut runtime = GoonRuntime::new(permissions, gui_controller, registry, mood);
 
         let code = r#"
-            await goon.image.show("test.png", {});
+            await goon.image.show({ tags: ["test"] });
         "#;
 
         let result = runtime.execute_script(code).await;

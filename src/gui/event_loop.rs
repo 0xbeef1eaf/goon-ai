@@ -1,3 +1,4 @@
+use super::content::ContentConstructor;
 use super::window_manager::{WindowHandle, WindowManager, WindowMessage, WindowOptions};
 use anyhow::Result;
 use std::sync::mpsc::Sender;
@@ -10,6 +11,7 @@ use winit::window::WindowId;
 pub enum GuiCommand {
     CreateWindow(WindowOptions, Sender<Result<WindowHandle>>),
     CloseWindow(WindowHandle),
+    SetContent(WindowHandle, Box<dyn ContentConstructor>),
 }
 
 pub struct App {
@@ -38,11 +40,20 @@ impl ApplicationHandler<GuiCommand> for App {
                 let mut wm = self.window_manager.lock().unwrap();
                 wm.close_window(handle);
             }
+            GuiCommand::SetContent(handle, content) => {
+                let mut wm = self.window_manager.lock().unwrap();
+                if let Some(window) = wm.get_window_mut(handle)
+                    && let Err(e) = window.set_content(content)
+                {
+                    eprintln!("Failed to set content: {}", e);
+                }
+            }
         }
     }
 
     fn about_to_wait(&mut self, event_loop: &ActiveEventLoop) {
         let mut wm = self.window_manager.lock().unwrap();
+        wm.request_redraws();
         if let Some(next_deadline) = wm.check_timeouts() {
             event_loop.set_control_flow(ControlFlow::WaitUntil(next_deadline));
         } else {
@@ -84,16 +95,15 @@ impl ApplicationHandler<GuiCommand> for App {
                     .get_handle_from_winit(window_id)
                     .and_then(|h| wm.get_window_mut(h))
                 {
-                    let opacity = window.get_render_opacity();
-                    if let Some(renderer) = &mut window.renderer {
-                        match renderer.render(opacity) {
-                            Ok(_) => {}
-                            Err(wgpu::SurfaceError::Lost) => {
+                    match window.render() {
+                        Ok(_) => {}
+                        Err(wgpu::SurfaceError::Lost) => {
+                            if let Some(renderer) = &mut window.renderer {
                                 renderer.resize(window.winit_window.inner_size())
                             }
-                            Err(wgpu::SurfaceError::OutOfMemory) => event_loop.exit(),
-                            Err(e) => eprintln!("{:?}", e),
                         }
+                        Err(wgpu::SurfaceError::OutOfMemory) => event_loop.exit(),
+                        Err(e) => eprintln!("{:?}", e),
                     }
                 }
             }

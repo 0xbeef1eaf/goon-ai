@@ -5,6 +5,12 @@ use std::borrow::Cow;
 #[derive(Debug)]
 pub struct OpError(pub AnyError);
 
+impl OpError {
+    pub fn new(msg: &str) -> Self {
+        OpError(anyhow::anyhow!("{}", msg))
+    }
+}
+
 impl std::fmt::Display for OpError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.0.fmt(f)
