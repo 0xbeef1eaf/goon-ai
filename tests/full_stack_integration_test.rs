@@ -55,6 +55,7 @@ async fn test_asset_loading_to_permission_check() {
             hypno: None,
             wallpaper: None,
         },
+        websites: None,
     };
 
     // User: Grants ONLY Image permission.

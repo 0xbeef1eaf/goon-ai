@@ -35,6 +35,7 @@ proc-macro2 = "1.0.103"
 rodio = "0.19"
 glyphon = "0.9.0"
 dirs = "6.0.0"
+open = "5.3.3"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 x11rb = "0.13"

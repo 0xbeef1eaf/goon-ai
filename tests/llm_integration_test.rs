@@ -26,6 +26,7 @@ fn test_llm_prompt_construction_flow() {
             hypno: None,
             wallpaper: None,
         },
+        websites: None,
     };
 
     let user = User {

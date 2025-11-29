@@ -1,5 +1,7 @@
 use crate::assets::registry::AssetRegistry;
-use crate::assets::types::{Asset, AudioAsset, HypnoAsset, ImageAsset, VideoAsset, WallpaperAsset};
+use crate::assets::types::{
+    Asset, AudioAsset, HypnoAsset, ImageAsset, VideoAsset, WallpaperAsset, WebsiteAsset,
+};
 use crate::config::pack::PackConfig;
 use anyhow::Result;
 use std::path::Path;
@@ -70,6 +72,17 @@ impl AssetLoader {
             }
         }
 
+        if let Some(websites) = &pack_config.websites {
+            for site in websites {
+                registry.add(Asset::Website(WebsiteAsset {
+                    name: site.name.clone(),
+                    url: site.url.clone(),
+                    description: site.description.clone(),
+                    tags: site.tags.clone(),
+                }));
+            }
+        }
+
         Ok(registry)
     }
 }
@@ -101,6 +114,7 @@ mod tests {
                 hypno: None,
                 wallpaper: None,
             },
+            websites: None,
         };
 
         let registry = AssetLoader::load(&pack_config, "Test Pack").unwrap();

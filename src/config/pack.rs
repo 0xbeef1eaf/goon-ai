@@ -9,6 +9,15 @@ pub struct PackConfig {
     pub meta: PackMeta,
     pub moods: Vec<Mood>,
     pub assets: Assets,
+    pub websites: Option<Vec<WebsiteConfig>>,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct WebsiteConfig {
+    pub name: String,
+    pub url: String,
+    pub description: String,
+    pub tags: Vec<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
