@@ -2,6 +2,7 @@ use crate::config::pack::PackConfig;
 use crate::config::settings::Settings;
 use crate::permissions::{PermissionChecker, PermissionResolver, PermissionSet};
 use anyhow::Result;
+use std::path::PathBuf;
 
 pub struct App {
     pub settings: Settings,
@@ -9,6 +10,7 @@ pub struct App {
     pub pack_config: PackConfig,
     #[allow(dead_code)]
     pub permissions: PermissionChecker,
+    original_wallpaper: Option<PathBuf>,
 }
 
 impl App {
@@ -41,10 +43,30 @@ impl App {
             );
         }
 
+        // 4. Backup Wallpaper (if permission granted)
+        let original_wallpaper =
+            if permissions.has_permission(crate::permissions::Permission::Wallpaper) {
+                let setter = crate::media::wallpaper::PlatformWallpaperSetter;
+                use crate::media::wallpaper::WallpaperSetter;
+                match setter.get_wallpaper() {
+                    Ok(path) => {
+                        println!("Backed up wallpaper: {:?}", path);
+                        Some(path)
+                    }
+                    Err(e) => {
+                        eprintln!("Failed to backup wallpaper: {}", e);
+                        None
+                    }
+                }
+            } else {
+                None
+            };
+
         Ok(Self {
             settings,
             pack_config,
             permissions,
+            original_wallpaper,
         })
     }
 
@@ -57,5 +79,18 @@ impl App {
 
         // Main loop will go here (Issue #16)
         Ok(())
+    }
+}
+
+impl Drop for App {
+    fn drop(&mut self) {
+        if let Some(path) = &self.original_wallpaper {
+            println!("Restoring wallpaper: {:?}", path);
+            let setter = crate::media::wallpaper::PlatformWallpaperSetter;
+            use crate::media::wallpaper::WallpaperSetter;
+            if let Err(e) = setter.set_wallpaper(path) {
+                eprintln!("Failed to restore wallpaper: {}", e);
+            }
+        }
     }
 }

@@ -81,7 +81,7 @@ impl GoonRuntime {
         let sources = sdk::get_all_typescript_sources();
 
         for source in sources {
-            match compiler.compile(source) {
+            match compiler.compile(&source) {
                 Ok(js_code) => {
                     let _ = js_runtime.execute_script("sdk_bridge.js", js_code);
                 }

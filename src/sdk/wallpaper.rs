@@ -2,6 +2,7 @@ use crate::assets::registry::AssetRegistry;
 use crate::assets::selector::AssetSelector;
 use crate::assets::types::Asset;
 use crate::config::pack::Mood;
+use crate::media::wallpaper::{PlatformWallpaperSetter, WallpaperSetter};
 use crate::runtime::error::OpError;
 use crate::runtime::utils::check_permission;
 use deno_core::OpState;
@@ -9,6 +10,7 @@ use deno_core::op2;
 use serde::Deserialize;
 use serde_json;
 use std::cell::RefCell;
+use std::fs;
 use std::rc::Rc;
 use std::sync::Arc;
 use ts_rs::TS;
@@ -17,6 +19,7 @@ use ts_rs::TS;
 #[ts(export)]
 #[serde(rename_all = "camelCase")]
 pub struct WallpaperOptions {
+    #[ts(optional)]
     tags: Option<Vec<String>>,
 }
 
@@ -46,15 +49,37 @@ pub async fn op_set_wallpaper(
         .select_wallpaper(&mood, &tags)
         .ok_or_else(|| OpError::new("No wallpaper found matching tags"))?;
 
-    let path = match asset {
-        Asset::Wallpaper(w) => &w.path,
+    let path_to_set = match asset {
+        Asset::Wallpaper(w) => w.path.clone(),
         _ => return Err(OpError::new("Selected asset is not a wallpaper")),
     };
 
-    println!("Setting wallpaper: {:?} with options: {:?}", path, opts);
+    // Create persistent directory
+    let data_dir =
+        dirs::data_local_dir().ok_or_else(|| OpError::new("Could not find data directory"))?;
+    let wallpaper_dir = data_dir.join("goon-ai").join("wallpapers");
+    fs::create_dir_all(&wallpaper_dir)
+        .map_err(|e| OpError::new(&format!("Failed to create wallpaper directory: {}", e)))?;
+
+    // Copy file
+    let file_name = path_to_set
+        .file_name()
+        .ok_or_else(|| OpError::new("Invalid wallpaper path"))?;
+    let target_path = wallpaper_dir.join(file_name);
+    fs::copy(&path_to_set, &target_path)
+        .map_err(|e| OpError::new(&format!("Failed to copy wallpaper: {}", e)))?;
+
+    let setter = PlatformWallpaperSetter;
+    setter
+        .set_wallpaper(&target_path)
+        .map_err(|e| OpError::new(&format!("Failed to set wallpaper: {}", e)))?;
+
     Ok(())
 }
 
-pub const TS_SOURCE: &str = include_str!("js/wallpaper.ts");
+pub fn get_source() -> String {
+    let decl = WallpaperOptions::decl();
+    format!("{}\n{}", decl, include_str!("js/wallpaper.ts"))
+}
 
 deno_core::extension!(goon_wallpaper, ops = [op_set_wallpaper],);
