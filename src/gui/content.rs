@@ -7,7 +7,7 @@ pub trait Renderable: Send + Sync {
     fn update(&mut self, _queue: &Queue) -> Option<Instant> {
         None
     }
-    fn resize(&mut self, _config: &SurfaceConfiguration) {}
+    fn resize(&mut self, _device: &Device, _queue: &Queue, _config: &SurfaceConfiguration) {}
 }
 
 pub trait ContentConstructor: Send {

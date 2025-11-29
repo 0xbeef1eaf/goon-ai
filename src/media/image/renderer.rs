@@ -87,6 +87,14 @@ impl Renderable for ImageRenderer {
 
         next_time
     }
+
+    fn resize(
+        &mut self,
+        _device: &wgpu::Device,
+        _queue: &wgpu::Queue,
+        _config: &wgpu::SurfaceConfiguration,
+    ) {
+    }
 }
 
 impl ImageRenderer {

@@ -2,6 +2,7 @@ use crate::assets::registry::AssetRegistry;
 use crate::assets::selector::AssetSelector;
 use crate::assets::types::Asset;
 use crate::config::pack::Mood;
+use crate::media::video::manager::VideoManager;
 use crate::runtime::error::OpError;
 use crate::runtime::utils::check_permission;
 use crate::sdk::types::WindowOptions;
@@ -12,6 +13,7 @@ use serde_json;
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::Arc;
+use tokio::sync::Mutex;
 use ts_rs::TS;
 
 #[derive(Deserialize, Debug, Default, TS)]
@@ -22,22 +24,28 @@ pub struct VideoOptions {
     pub loop_: Option<bool>, // "loop" is a keyword
     pub volume: Option<f32>,
     pub autoplay: Option<bool>,
+    pub duration: Option<u64>,
     #[serde(flatten)]
     pub window: WindowOptions,
 }
 
 #[op2(async)]
+#[string]
 pub async fn op_show_video(
     state: Rc<RefCell<OpState>>,
     #[serde] options: Option<serde_json::Value>,
-) -> Result<u32, OpError> {
-    let (registry, mood) = {
+) -> Result<String, OpError> {
+    let (registry, mood, video_manager) = {
         let mut state = state.borrow_mut();
         check_permission(&mut state, "video")?;
         let registry = state.borrow::<Arc<AssetRegistry>>().clone();
         let mood = state.borrow::<Mood>().clone();
-        (registry, mood)
+        let video_manager = state.try_borrow::<Arc<Mutex<VideoManager>>>().cloned();
+        (registry, mood, video_manager)
     };
+
+    let video_manager =
+        video_manager.ok_or_else(|| OpError::new("Video system not initialized"))?;
 
     let opts: VideoOptions = if let Some(o) = options {
         serde_json::from_value(o).map_err(|e| OpError::new(&e.to_string()))?
@@ -58,8 +66,16 @@ pub async fn op_show_video(
     };
 
     println!("Showing video: {:?} with options: {:?}", path, opts);
-    // TODO: Implement actual video showing logic (similar to image but with video player)
-    Ok(2)
+
+    let handle = {
+        let mut manager = video_manager.lock().await;
+        manager
+            .spawn_video(path.clone(), &opts)
+            .await
+            .map_err(|e| OpError::new(&e.to_string()))?
+    };
+
+    Ok(handle.0.to_string())
 }
 
 pub const TS_SOURCE: &str = include_str!("js/video.ts");

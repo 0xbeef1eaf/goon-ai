@@ -24,4 +24,5 @@ pub struct WindowOptions {
     pub size: Option<Size>,
     pub always_on_top: Option<bool>,
     pub click_through: Option<bool>,
+    pub decorations: Option<bool>,
 }

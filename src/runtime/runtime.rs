@@ -1,6 +1,8 @@
 use crate::assets::registry::AssetRegistry;
 use crate::config::pack::Mood;
 use crate::gui::window_manager::GuiInterface;
+use crate::media::audio::manager::AudioManager;
+use crate::media::video::manager::VideoManager;
 use crate::permissions::PermissionChecker;
 use crate::sdk;
 use crate::sdk::{
@@ -10,19 +12,33 @@ use crate::sdk::{
 use crate::typescript::TypeScriptCompiler;
 use anyhow::Result;
 use deno_core::{JsRuntime, ModuleSpecifier, RuntimeOptions};
-use std::sync::Arc;
+use rodio::OutputStream;
+use std::sync::{Arc, Mutex};
+
+pub struct RuntimeContext {
+    pub permissions: PermissionChecker,
+    pub gui_controller: Arc<dyn GuiInterface>,
+    pub registry: Arc<AssetRegistry>,
+    pub mood: Mood,
+    pub max_audio_concurrent: usize,
+    pub max_video_concurrent: usize,
+}
 
 pub struct GoonRuntime {
     js_runtime: JsRuntime,
+    _audio_stream: Option<OutputStream>,
 }
 
 impl GoonRuntime {
-    pub fn new(
-        permissions: PermissionChecker,
-        gui_controller: Arc<dyn GuiInterface>,
-        registry: Arc<AssetRegistry>,
-        mood: Mood,
-    ) -> Self {
+    pub fn new(context: RuntimeContext) -> Self {
+        let (audio_stream, stream_handle) = match OutputStream::try_default() {
+            Ok((s, h)) => (Some(s), Some(h)),
+            Err(e) => {
+                eprintln!("Failed to initialize audio device: {}", e);
+                (None, None)
+            }
+        };
+
         let mut js_runtime = JsRuntime::new(RuntimeOptions {
             extensions: vec![
                 goon_system::init(),
@@ -41,10 +57,23 @@ impl GoonRuntime {
         {
             let op_state = js_runtime.op_state();
             let mut op_state = op_state.borrow_mut();
-            op_state.put(permissions);
-            op_state.put(gui_controller);
-            op_state.put(registry);
-            op_state.put(mood);
+            op_state.put(context.permissions);
+            op_state.put(context.gui_controller);
+            op_state.put(context.registry);
+            op_state.put(context.mood);
+
+            if let Some(handle) = stream_handle {
+                let audio_manager = Arc::new(Mutex::new(AudioManager::new(
+                    handle,
+                    context.max_audio_concurrent,
+                )));
+                op_state.put(audio_manager);
+            }
+
+            let video_manager = Arc::new(tokio::sync::Mutex::new(VideoManager::new(
+                context.max_video_concurrent,
+            )));
+            op_state.put(video_manager);
         }
 
         // Compile and load SDK bridge code
@@ -62,7 +91,10 @@ impl GoonRuntime {
             }
         }
 
-        Self { js_runtime }
+        Self {
+            js_runtime,
+            _audio_stream: audio_stream,
+        }
     }
 
     pub async fn execute_script(&mut self, code: &str) -> Result<()> {
@@ -121,7 +153,15 @@ mod tests {
             description: "".to_string(),
             tags: vec![],
         };
-        let mut runtime = GoonRuntime::new(permissions, gui_controller, registry, mood);
+        let context = RuntimeContext {
+            permissions,
+            gui_controller,
+            registry,
+            mood,
+            max_audio_concurrent: 10,
+            max_video_concurrent: 3,
+        };
+        let mut runtime = GoonRuntime::new(context);
 
         let code = r#"
             goon.system.log("Hello from JS");
@@ -145,7 +185,15 @@ mod tests {
             description: "".to_string(),
             tags: vec![],
         };
-        let mut runtime = GoonRuntime::new(permissions, gui_controller, registry, mood);
+        let context = RuntimeContext {
+            permissions,
+            gui_controller,
+            registry,
+            mood,
+            max_audio_concurrent: 10,
+            max_video_concurrent: 3,
+        };
+        let mut runtime = GoonRuntime::new(context);
 
         let code = r#"
             await goon.image.show({ tags: ["test"] });

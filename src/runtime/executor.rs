@@ -28,13 +28,10 @@ impl Executor {
     pub async fn execute(
         &self,
         ts_code: &str,
-        permissions: PermissionChecker,
-        gui_controller: Arc<dyn GuiInterface>,
-        registry: Arc<AssetRegistry>,
-        mood: Mood,
+        context: crate::runtime::runtime::RuntimeContext,
     ) -> Result<()> {
         let js_code = self.compiler.compile(ts_code)?;
-        let mut runtime = GoonRuntime::new(permissions, gui_controller, registry, mood);
+        let mut runtime = GoonRuntime::new(context);
         runtime.execute_script(&js_code).await?;
         Ok(())
     }
@@ -79,12 +76,19 @@ mod tests {
             tags: vec![],
         };
 
+        let context = crate::runtime::runtime::RuntimeContext {
+            permissions,
+            gui_controller,
+            registry,
+            mood,
+            max_audio_concurrent: 10,
+            max_video_concurrent: 3,
+        };
+
         let code = r#"
             goon.system.log("Executor test");
         "#;
-        let result = executor
-            .execute(code, permissions, gui_controller, registry, mood)
-            .await;
+        let result = executor.execute(code, context).await;
         assert!(result.is_ok());
     }
 
@@ -102,10 +106,17 @@ mod tests {
             tags: vec![],
         };
 
+        let context = crate::runtime::runtime::RuntimeContext {
+            permissions,
+            gui_controller,
+            registry,
+            mood,
+            max_audio_concurrent: 10,
+            max_video_concurrent: 3,
+        };
+
         let code = "const x: number = ;"; // Invalid syntax
-        let result = executor
-            .execute(code, permissions, gui_controller, registry, mood)
-            .await;
+        let result = executor.execute(code, context).await;
         assert!(result.is_err());
     }
 }

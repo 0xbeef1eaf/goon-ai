@@ -2,4 +2,4 @@
 import type { Position } from "./Position";
 import type { Size } from "./Size";
 
-export type VideoOptions = { tags: Array<string> | null, loop: boolean | null, volume: number | null, autoplay: boolean | null, opacity: number | null, position: Position | null, size: Size | null, alwaysOnTop: boolean | null, clickThrough: boolean | null, };
+export type VideoOptions = { tags: Array<string> | null, loop: boolean | null, volume: number | null, autoplay: boolean | null, duration: bigint | null, opacity: number | null, position: Position | null, size: Size | null, alwaysOnTop: boolean | null, clickThrough: boolean | null, decorations: boolean | null, };
