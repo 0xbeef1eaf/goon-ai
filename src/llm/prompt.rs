@@ -13,7 +13,7 @@ impl PromptBuilder {
         mood: &str,
         user: &User,
         history: &ConversationManager,
-        // sdk_defs: &str, // TODO: Pass SDK definitions
+        sdk_defs: &str,
     ) -> Vec<ChatMessage> {
         let mut messages = Vec::new();
         let mut system_content = String::new();
@@ -41,9 +41,8 @@ impl PromptBuilder {
         // 3. SDK Definitions
         system_content.push_str("# Available SDK Functions\n");
         system_content.push_str("```typescript\n");
-        // TODO: Insert actual SDK definitions here
-        system_content.push_str("// SDK definitions will go here\n");
-        system_content.push_str("```\n\n");
+        system_content.push_str(sdk_defs);
+        system_content.push_str("\n```\n\n");
 
         // 3.1 Available Websites (if any)
         if let Some(websites) = pack_config.websites.as_ref().filter(|w| !w.is_empty()) {
@@ -139,7 +138,8 @@ mod tests {
         let user = create_dummy_user();
         let history = ConversationManager::new(10);
 
-        let messages = PromptBuilder::build(&pack_config, "Happy", &user, &history);
+        let messages =
+            PromptBuilder::build(&pack_config, "Happy", &user, &history, "class image {}");
         let system_msg = &messages[0];
 
         assert!(system_msg.content.contains("# Available Websites"));
@@ -158,7 +158,8 @@ mod tests {
         history.add_message("user", "Hello");
         history.add_message("assistant", "Hi there");
 
-        let messages = PromptBuilder::build(&pack_config, "Happy", &user, &history);
+        let messages =
+            PromptBuilder::build(&pack_config, "Happy", &user, &history, "class image {}");
 
         assert_eq!(messages.len(), 3); // System + User + Assistant
 
