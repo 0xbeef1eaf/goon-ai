@@ -146,10 +146,12 @@ impl Window {
 
     pub fn get_render_opacity(&self) -> f32 {
         #[cfg(target_os = "linux")]
-        if let Ok(handle) = self.winit_window.window_handle() {
-            if let RawWindowHandle::Wayland(_) = handle.as_raw() {
-                return self.opacity;
-            }
+        if self
+            .winit_window
+            .window_handle()
+            .is_ok_and(|h| matches!(h.as_raw(), RawWindowHandle::Wayland(_)))
+        {
+            return self.opacity;
         }
         1.0
     }

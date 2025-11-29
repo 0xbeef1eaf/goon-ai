@@ -50,24 +50,24 @@ graph TB
     Main --> Ollama
     Main --> SWC
     Main --> Deno
-    
+
     Ollama --> Prompt
     Ollama --> Conv
-    
+
     Config --> Pack
     Config --> PermResolver
     Pack --> AssetRegistry
-    
+
     PermResolver --> PermChecker
     PermResolver --> SDK
-    
+
     SDK --> Prompt
     SWC --> Deno
-    
+
     Deno --> WinMgr
     Deno --> AudioPlayer
     Deno --> AssetSelector
-    
+
     AssetSelector --> MoodFilter
 ```
 

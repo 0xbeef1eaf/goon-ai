@@ -28,7 +28,7 @@ force-clean = false
 skip-clean = true
 
 # Enable verbose logging for user information during tests.
-verbose = false 
+verbose = false
 
 # Enable debugging information for internal issues.
 debug = false

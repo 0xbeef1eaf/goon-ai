@@ -97,7 +97,15 @@ impl WindowManager {
             messages: Vec::new(),
         }
     }
+}
 
+impl Default for WindowManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl WindowManager {
     pub fn create_window(
         &mut self,
         options: WindowOptions,
