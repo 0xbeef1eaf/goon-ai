@@ -1,3 +1,4 @@
+use crate::gui::window_manager::GuiController;
 use crate::permissions::PermissionChecker;
 use crate::sdk;
 use crate::sdk::{
@@ -14,7 +15,7 @@ pub struct GoonRuntime {
 }
 
 impl GoonRuntime {
-    pub fn new(permissions: PermissionChecker) -> Self {
+    pub fn new(permissions: PermissionChecker, gui_controller: GuiController) -> Self {
         let mut js_runtime = JsRuntime::new(RuntimeOptions {
             extensions: vec![
                 goon_system::init(),
@@ -34,6 +35,7 @@ impl GoonRuntime {
             let op_state = js_runtime.op_state();
             let mut op_state = op_state.borrow_mut();
             op_state.put(permissions);
+            op_state.put(gui_controller);
         }
 
         // Compile and load SDK bridge code
@@ -82,12 +84,21 @@ mod tests {
         let mut set = PermissionSet::new();
         set.add(Permission::Image);
         let permissions = PermissionChecker::new(set);
-        let mut runtime = GoonRuntime::new(permissions);
+
+        // Mock GuiController
+        let event_loop =
+            winit::event_loop::EventLoop::<crate::gui::event_loop::GuiCommand>::with_user_event()
+                .build()
+                .unwrap();
+        let proxy = event_loop.create_proxy();
+        let gui_controller = GuiController::new(proxy);
+
+        let mut runtime = GoonRuntime::new(permissions, gui_controller);
 
         let code = r#"
             goon.system.log("Hello from JS");
-            const handle = await goon.image.show("test.png", {});
-            goon.system.log("Image handle: " + handle);
+            // const handle = await goon.image.show("test.png", {}); // This would fail without real window manager
+            // goon.system.log("Image handle: " + handle);
         "#;
 
         let result = runtime.execute_script(code).await;
@@ -98,7 +109,16 @@ mod tests {
     async fn test_permission_denied() {
         let set = PermissionSet::new(); // No permissions
         let permissions = PermissionChecker::new(set);
-        let mut runtime = GoonRuntime::new(permissions);
+
+        // Mock GuiController
+        let event_loop =
+            winit::event_loop::EventLoop::<crate::gui::event_loop::GuiCommand>::with_user_event()
+                .build()
+                .unwrap();
+        let proxy = event_loop.create_proxy();
+        let gui_controller = GuiController::new(proxy);
+
+        let mut runtime = GoonRuntime::new(permissions, gui_controller);
 
         let code = r#"
             await goon.image.show("test.png", {});

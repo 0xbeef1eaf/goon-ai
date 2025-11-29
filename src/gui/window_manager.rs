@@ -54,6 +54,8 @@ impl Default for WindowOptions {
     }
 }
 
+use super::content::ContentConstructor;
+
 #[derive(Clone)]
 pub struct GuiController {
     proxy: EventLoopProxy<GuiCommand>,
@@ -76,6 +78,17 @@ impl GuiController {
     pub fn close_window(&self, handle: WindowHandle) -> Result<()> {
         self.proxy
             .send_event(GuiCommand::CloseWindow(handle))
+            .map_err(|_| anyhow::anyhow!("Event loop closed"))?;
+        Ok(())
+    }
+
+    pub fn set_content(
+        &self,
+        handle: WindowHandle,
+        content: Box<dyn ContentConstructor>,
+    ) -> Result<()> {
+        self.proxy
+            .send_event(GuiCommand::SetContent(handle, content))
             .map_err(|_| anyhow::anyhow!("Event loop closed"))?;
         Ok(())
     }
@@ -155,7 +168,30 @@ impl WindowManager {
         }
 
         // Return next deadline
-        self.deadlines.iter().map(|(d, _)| *d).min()
+        let next_timeout = self.deadlines.iter().map(|(d, _)| *d).min();
+        let next_anim = self
+            .windows
+            .values_mut()
+            .filter_map(|w| w.get_next_update_time())
+            .min();
+
+        match (next_timeout, next_anim) {
+            (Some(t), Some(a)) => Some(std::cmp::min(t, a)),
+            (Some(t), None) => Some(t),
+            (None, Some(a)) => Some(a),
+            (None, None) => None,
+        }
+    }
+
+    pub fn request_redraws(&mut self) {
+        let now = Instant::now();
+        for window in self.windows.values_mut() {
+            if let Some(next_update) = window.get_next_update_time()
+                && next_update <= now
+            {
+                window.winit_window.request_redraw();
+            }
+        }
     }
 
     pub fn get_window(&self, handle: WindowHandle) -> Option<&Window> {

@@ -1,3 +1,4 @@
+use crate::gui::window_manager::GuiController;
 use crate::permissions::PermissionChecker;
 use crate::runtime::GoonRuntime;
 use crate::typescript::TypeScriptCompiler;
@@ -20,9 +21,14 @@ impl Executor {
         }
     }
 
-    pub async fn execute(&self, ts_code: &str, permissions: PermissionChecker) -> Result<()> {
+    pub async fn execute(
+        &self,
+        ts_code: &str,
+        permissions: PermissionChecker,
+        gui_controller: GuiController,
+    ) -> Result<()> {
         let js_code = self.compiler.compile(ts_code)?;
-        let mut runtime = GoonRuntime::new(permissions);
+        let mut runtime = GoonRuntime::new(permissions, gui_controller);
         runtime.execute_script(&js_code).await?;
         Ok(())
     }
@@ -38,10 +44,18 @@ mod tests {
         let executor = Executor::new();
         let set = PermissionSet::new();
         let permissions = PermissionChecker::new(set);
+
+        let event_loop =
+            winit::event_loop::EventLoop::<crate::gui::event_loop::GuiCommand>::with_user_event()
+                .build()
+                .unwrap();
+        let proxy = event_loop.create_proxy();
+        let gui_controller = GuiController::new(proxy);
+
         let code = r#"
             goon.system.log("Executor test");
         "#;
-        let result = executor.execute(code, permissions).await;
+        let result = executor.execute(code, permissions, gui_controller).await;
         assert!(result.is_ok());
     }
 
@@ -50,8 +64,16 @@ mod tests {
         let executor = Executor::new();
         let set = PermissionSet::new();
         let permissions = PermissionChecker::new(set);
+
+        let event_loop =
+            winit::event_loop::EventLoop::<crate::gui::event_loop::GuiCommand>::with_user_event()
+                .build()
+                .unwrap();
+        let proxy = event_loop.create_proxy();
+        let gui_controller = GuiController::new(proxy);
+
         let code = "const x: number = ;"; // Invalid syntax
-        let result = executor.execute(code, permissions).await;
+        let result = executor.execute(code, permissions, gui_controller).await;
         assert!(result.is_err());
     }
 }

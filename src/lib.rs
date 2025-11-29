@@ -3,6 +3,7 @@ pub mod config;
 pub mod core;
 pub mod gui;
 pub mod llm;
+pub mod media;
 pub mod permissions;
 pub mod runtime;
 pub mod sdk;
