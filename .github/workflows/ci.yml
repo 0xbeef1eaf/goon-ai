@@ -48,3 +48,25 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - name: Linting
         run: cargo clippy -- -D warnings
+
+  merge-dependabot:
+    name: Merge Dependabot PRs
+    runs-on: ubuntu-latest
+    needs: [test, fmt, clippy]
+    if: github.actor == 'dependabot[bot]'
+    steps:
+      - uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const pr = context.payload.pull_request;
+            if (pr && pr.user.login === 'dependabot[bot]') {
+              await github.pulls.merge({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: pr.number,
+                commit_title: `Merge Dependabot PR #${pr.number}`,
+                commit_message: 'Automated merge of Dependabot PR',
+                merge_method: 'squash'
+              });
+            }
