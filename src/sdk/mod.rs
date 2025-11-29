@@ -19,17 +19,17 @@ pub mod types;
 
 pub const INIT_SOURCE: &str = include_str!("js/init.ts");
 
-pub fn get_all_typescript_sources() -> Vec<&'static str> {
+pub fn get_all_typescript_sources() -> Vec<String> {
     vec![
-        INIT_SOURCE,
-        image::TS_SOURCE,
-        video::TS_SOURCE,
-        audio::TS_SOURCE,
-        hypno::TS_SOURCE,
-        wallpaper::TS_SOURCE,
-        prompt::TS_SOURCE,
-        website::TS_SOURCE,
-        system::TS_SOURCE,
+        INIT_SOURCE.to_string(),
+        image::TS_SOURCE.to_string(),
+        video::TS_SOURCE.to_string(),
+        audio::TS_SOURCE.to_string(),
+        hypno::TS_SOURCE.to_string(),
+        wallpaper::get_source(),
+        prompt::TS_SOURCE.to_string(),
+        website::TS_SOURCE.to_string(),
+        system::TS_SOURCE.to_string(),
     ]
 }
 
