@@ -51,8 +51,9 @@ pub async fn op_show_image(
 
     let tags = opts.tags.unwrap_or_default();
     let selector = AssetSelector::new(&registry);
-    
-    let asset = selector.select_image(&mood, &tags)
+
+    let asset = selector
+        .select_image(&mood, &tags)
         .ok_or_else(|| OpError::new("No image found matching tags"))?;
 
     let path = match asset {
@@ -96,7 +97,9 @@ pub async fn op_show_image(
         )
     };
 
-    let size = opts.window.size
+    let size = opts
+        .window
+        .size
         .map(|s| (s.width, s.height))
         .unwrap_or((width, height));
 

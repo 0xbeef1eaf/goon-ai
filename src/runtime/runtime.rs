@@ -86,9 +86,9 @@ impl GoonRuntime {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::permissions::{Permission, PermissionChecker, PermissionSet};
-    use crate::gui::window_manager::{GuiInterface, WindowHandle, WindowOptions};
     use crate::gui::content::ContentConstructor;
+    use crate::gui::window_manager::{GuiInterface, WindowHandle, WindowOptions};
+    use crate::permissions::{Permission, PermissionChecker, PermissionSet};
 
     struct MockGuiController;
 
@@ -99,7 +99,11 @@ mod tests {
         fn close_window(&self, _handle: WindowHandle) -> Result<()> {
             Ok(())
         }
-        fn set_content(&self, _handle: WindowHandle, _content: Box<dyn ContentConstructor>) -> Result<()> {
+        fn set_content(
+            &self,
+            _handle: WindowHandle,
+            _content: Box<dyn ContentConstructor>,
+        ) -> Result<()> {
             Ok(())
         }
     }

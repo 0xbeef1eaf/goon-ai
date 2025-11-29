@@ -47,8 +47,9 @@ pub async fn op_show_video(
 
     let tags = opts.tags.clone().unwrap_or_default();
     let selector = AssetSelector::new(&registry);
-    
-    let asset = selector.select_video(&mood, &tags)
+
+    let asset = selector
+        .select_video(&mood, &tags)
         .ok_or_else(|| OpError::new("No video found matching tags"))?;
 
     let path = match asset {

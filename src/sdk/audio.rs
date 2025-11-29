@@ -43,8 +43,9 @@ pub async fn op_play_audio(
 
     let tags = opts.tags.clone().unwrap_or_default();
     let selector = AssetSelector::new(&registry);
-    
-    let asset = selector.select_audio(&mood, &tags)
+
+    let asset = selector
+        .select_audio(&mood, &tags)
         .ok_or_else(|| OpError::new("No audio found matching tags"))?;
 
     let path = match asset {

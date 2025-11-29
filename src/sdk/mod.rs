@@ -11,10 +11,10 @@ pub mod video;
 pub mod wallpaper;
 pub mod website;
 
+pub mod analysis;
 pub mod generator;
 pub mod metadata;
 pub mod templates;
-pub mod analysis;
 pub mod types;
 
 pub const INIT_SOURCE: &str = include_str!("js/init.ts");

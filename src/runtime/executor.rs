@@ -43,9 +43,9 @@ impl Executor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::permissions::{PermissionChecker, PermissionSet};
-    use crate::gui::window_manager::{GuiInterface, WindowHandle, WindowOptions};
     use crate::gui::content::ContentConstructor;
+    use crate::gui::window_manager::{GuiInterface, WindowHandle, WindowOptions};
+    use crate::permissions::{PermissionChecker, PermissionSet};
 
     struct MockGuiController;
 
@@ -56,7 +56,11 @@ mod tests {
         fn close_window(&self, _handle: WindowHandle) -> Result<()> {
             Ok(())
         }
-        fn set_content(&self, _handle: WindowHandle, _content: Box<dyn ContentConstructor>) -> Result<()> {
+        fn set_content(
+            &self,
+            _handle: WindowHandle,
+            _content: Box<dyn ContentConstructor>,
+        ) -> Result<()> {
             Ok(())
         }
     }
@@ -78,7 +82,9 @@ mod tests {
         let code = r#"
             goon.system.log("Executor test");
         "#;
-        let result = executor.execute(code, permissions, gui_controller, registry, mood).await;
+        let result = executor
+            .execute(code, permissions, gui_controller, registry, mood)
+            .await;
         assert!(result.is_ok());
     }
 
@@ -97,7 +103,9 @@ mod tests {
         };
 
         let code = "const x: number = ;"; // Invalid syntax
-        let result = executor.execute(code, permissions, gui_controller, registry, mood).await;
+        let result = executor
+            .execute(code, permissions, gui_controller, registry, mood)
+            .await;
         assert!(result.is_err());
     }
 }

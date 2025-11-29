@@ -1,12 +1,12 @@
+use anyhow::Result;
 use goon_ai::assets::loader::AssetLoader;
 use goon_ai::assets::selector::AssetSelector;
 use goon_ai::assets::types::Asset;
 use goon_ai::config::pack::{Asset as ConfigAsset, Assets, Mood, PackConfig, PackMeta};
+use goon_ai::gui::content::ContentConstructor;
+use goon_ai::gui::window_manager::{GuiInterface, WindowHandle, WindowOptions};
 use goon_ai::permissions::{Permission, PermissionChecker, PermissionResolver, PermissionSet};
 use goon_ai::runtime::GoonRuntime;
-use goon_ai::gui::window_manager::{GuiInterface, WindowHandle, WindowOptions};
-use goon_ai::gui::content::ContentConstructor;
-use anyhow::Result;
 
 struct MockGuiController;
 
@@ -17,7 +17,11 @@ impl GuiInterface for MockGuiController {
     fn close_window(&self, _handle: WindowHandle) -> Result<()> {
         Ok(())
     }
-    fn set_content(&self, _handle: WindowHandle, _content: Box<dyn ContentConstructor>) -> Result<()> {
+    fn set_content(
+        &self,
+        _handle: WindowHandle,
+        _content: Box<dyn ContentConstructor>,
+    ) -> Result<()> {
         Ok(())
     }
 }
@@ -98,13 +102,18 @@ async fn test_asset_loading_to_permission_check() {
 
     // 5. Runtime Execution
     // We use the checker derived from the resolution step.
-    
+
     // Mock GuiController
     let gui_controller = std::sync::Arc::new(MockGuiController);
     let registry_arc = std::sync::Arc::new(registry);
     let mood_clone = mood.clone();
 
-    let mut runtime = GoonRuntime::new(checker.clone(), gui_controller.clone(), registry_arc.clone(), mood_clone.clone());
+    let mut runtime = GoonRuntime::new(
+        checker.clone(),
+        gui_controller.clone(),
+        registry_arc.clone(),
+        mood_clone.clone(),
+    );
 
     // A. Attempt to show the selected Image (Permission Granted)
     // We inject the selected path into the JS code, simulating the LLM using a path provided by the system (or known to it).
@@ -127,7 +136,12 @@ async fn test_asset_loading_to_permission_check() {
 
     // B. Attempt to show the selected Video (Permission Denied)
     // Create a new runtime to avoid module name collision
-    let mut runtime2 = GoonRuntime::new(checker.clone(), gui_controller.clone(), registry_arc.clone(), mood_clone.clone());
+    let mut runtime2 = GoonRuntime::new(
+        checker.clone(),
+        gui_controller.clone(),
+        registry_arc.clone(),
+        mood_clone.clone(),
+    );
 
     let code_video = r#"
         (async () => {

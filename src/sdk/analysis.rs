@@ -34,7 +34,7 @@ impl<'ast> Visit<'ast> for OpVisitor {
         if is_op {
             let name = node.sig.ident.to_string();
             let mut docs = Vec::new();
-            
+
             // Extract doc comments
             for attr in &node.attrs {
                 if let Meta::NameValue(meta) = &attr.meta {
@@ -63,13 +63,9 @@ impl<'ast> Visit<'ast> for OpVisitor {
                 }
             }
 
-            self.ops.push(OpInfo {
-                name,
-                docs,
-                args,
-            });
+            self.ops.push(OpInfo { name, docs, args });
         }
-        
+
         // Continue visiting children
         syn::visit::visit_item_fn(self, node);
     }
@@ -78,9 +74,9 @@ impl<'ast> Visit<'ast> for OpVisitor {
 pub fn analyze_source(path: &Path) -> Vec<OpInfo> {
     let content = fs::read_to_string(path).unwrap_or_default();
     let syntax = syn::parse_file(&content).expect("Unable to parse file");
-    
+
     let mut visitor = OpVisitor { ops: Vec::new() };
     visitor.visit_file(&syntax);
-    
+
     visitor.ops
 }

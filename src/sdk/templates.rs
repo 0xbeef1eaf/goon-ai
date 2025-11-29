@@ -1,12 +1,13 @@
-use crate::sdk::{image, video, audio, wallpaper, prompt, website, types};
+use crate::sdk::{audio, image, prompt, types, video, wallpaper, website};
 use ts_rs::TS;
 
 pub fn types_ts() -> String {
     let position_decl = types::Position::decl();
     let size_decl = types::Size::decl();
     let window_options_decl = types::WindowOptions::decl();
-    
-    format!(r#"
+
+    format!(
+        r#"
 /**
  * Base window handle interface
  */
@@ -22,7 +23,9 @@ interface WindowHandle {{
 {}
 
 {}
-"#, position_decl, size_decl, window_options_decl)
+"#,
+        position_decl, size_decl, window_options_decl
+    )
 }
 
 pub fn pack_ts() -> String {
@@ -73,12 +76,14 @@ class pack {
      */
     static async setMood(mood_name: string): Promise<void>;
 }
-"#.to_string()
+"#
+    .to_string()
 }
 
 pub fn image_ts() -> String {
     let options_interface = image::ImageOptions::decl();
-    format!(r#"
+    format!(
+        r#"
 {}
 interface ImageHandle extends WindowHandle {{
     /**
@@ -107,12 +112,15 @@ class image {{
      */
     static async show(options: ImageOptions): Promise<ImageHandle>;
 }}
-"#, options_interface)
+"#,
+        options_interface
+    )
 }
 
 pub fn video_ts() -> String {
     let options_interface = video::VideoOptions::decl();
-    format!(r#"
+    format!(
+        r#"
 {}
 interface VideoHandle extends WindowHandle {{
     setOpacity(opacity: number): Promise<void>;
@@ -124,12 +132,15 @@ interface VideoHandle extends WindowHandle {{
 class video {{
     static async play(options: VideoOptions): Promise<VideoHandle>;
 }}
-"#, options_interface)
+"#,
+        options_interface
+    )
 }
 
 pub fn audio_ts() -> String {
     let options_interface = audio::AudioOptions::decl();
-    format!(r#"
+    format!(
+        r#"
 {}
 interface AudioHandle {{
     stop(): Promise<void>;
@@ -139,12 +150,15 @@ interface AudioHandle {{
 class audio {{
     static async play(options: AudioOptions): Promise<AudioHandle>;
 }}
-"#, options_interface)
+"#,
+        options_interface
+    )
 }
 
 pub fn prompt_ts() -> String {
     let options_interface = prompt::PromptOptions::decl();
-    format!(r#"
+    format!(
+        r#"
 /**
  * Text prompt with optional image display
  */
@@ -178,12 +192,15 @@ class textPrompt {{
      */
     static async show(options: PromptOptions): Promise<WindowHandle>;
 }}
-"#, options_interface)
+"#,
+        options_interface
+    )
 }
 
 pub fn wallpaper_ts() -> String {
     let options_interface = wallpaper::WallpaperOptions::decl();
-    format!(r#"
+    format!(
+        r#"
 {}
 /**
  * Desktop wallpaper functions
@@ -207,12 +224,15 @@ class wallpaper {{
      */
     static async set(options: WallpaperOptions): Promise<void>;
 }}
-"#, options_interface)
+"#,
+        options_interface
+    )
 }
 
 pub fn website_ts() -> String {
     let options_interface = website::WebsiteOptions::decl();
-    format!(r#"
+    format!(
+        r#"
 {}
 /**
  * Web browser functions
@@ -236,5 +256,7 @@ class website {{
      */
     static async open(options: WebsiteOptions): Promise<void>;
 }}
-"#, options_interface)
+"#,
+        options_interface
+    )
 }

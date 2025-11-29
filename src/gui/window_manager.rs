@@ -59,7 +59,8 @@ use super::content::ContentConstructor;
 pub trait GuiInterface: Send + Sync {
     fn create_window(&self, options: WindowOptions) -> Result<WindowHandle>;
     fn close_window(&self, handle: WindowHandle) -> Result<()>;
-    fn set_content(&self, handle: WindowHandle, content: Box<dyn ContentConstructor>) -> Result<()>;
+    fn set_content(&self, handle: WindowHandle, content: Box<dyn ContentConstructor>)
+    -> Result<()>;
 }
 
 #[derive(Clone)]

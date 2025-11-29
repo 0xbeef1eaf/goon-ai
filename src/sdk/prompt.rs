@@ -33,7 +33,10 @@ pub async fn op_show_prompt(
         return Err(OpError::new("Prompt options required"));
     };
 
-    println!("Showing prompt: {} with image options: {:?}", opts.text, opts.image);
+    println!(
+        "Showing prompt: {} with image options: {:?}",
+        opts.text, opts.image
+    );
     Ok(4)
 }
 

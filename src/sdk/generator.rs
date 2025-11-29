@@ -1,4 +1,4 @@
-use crate::sdk::{metadata, analysis};
+use crate::sdk::{analysis, metadata};
 use std::path::Path;
 
 pub fn generate_definitions(allowed_modules: &[String]) -> String {
@@ -19,7 +19,7 @@ pub fn generate_definitions(allowed_modules: &[String]) -> String {
         if include {
             definitions.push_str(&format!("\n// Module: {}\n", module.name));
             definitions.push_str(&module.template);
-            
+
             // Analyze source file for ops if it exists
             let source_path = format!("src/sdk/{}.rs", module.name);
             if Path::new(&source_path).exists() {
@@ -30,7 +30,7 @@ pub fn generate_definitions(allowed_modules: &[String]) -> String {
                     // definitions.push_str(&format!("// Found op: {}\n", op.name));
                 }
             }
-            
+
             definitions.push('\n');
         }
     }

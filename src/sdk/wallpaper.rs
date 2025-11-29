@@ -41,8 +41,9 @@ pub async fn op_set_wallpaper(
 
     let tags = opts.tags.clone().unwrap_or_default();
     let selector = AssetSelector::new(&registry);
-    
-    let asset = selector.select_wallpaper(&mood, &tags)
+
+    let asset = selector
+        .select_wallpaper(&mood, &tags)
         .ok_or_else(|| OpError::new("No wallpaper found matching tags"))?;
 
     let path = match asset {
