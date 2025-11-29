@@ -6,6 +6,10 @@ An LLM-controlled background application that spawns interactive GUI elements th
 
 goon.ai is a Rust-based application that allows Language Models to control desktop media experiences through a type-safe TypeScript API. The LLM generates TypeScript code that compiles and executes in a secure sandbox, triggering GUI windows, media playback, and system interactions based on mood-aware asset selection.
 
+## Requirements
+
+- [MPV](https://mpv.io/installation/)
+
 ## Key Features
 
 - **LLM-Driven Interface**: LLMs generate TypeScript code to control the application

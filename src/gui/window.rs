@@ -75,12 +75,19 @@ impl Window {
         }
     }
 
+    pub fn handle_input(&mut self, event: &winit::event::KeyEvent) -> bool {
+        if let Some(content) = &mut self.content_renderer {
+            return content.handle_input(event);
+        }
+        false
+    }
+
     pub fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
         let opacity = self.get_render_opacity();
         if let Some(renderer) = &mut self.renderer {
             // Update content
             if let Some(content) = &mut self.content_renderer {
-                content.update(&renderer.queue);
+                content.update(&renderer.device, &renderer.queue);
             }
 
             let content_renderer = self.content_renderer.as_ref();
@@ -114,7 +121,7 @@ impl Window {
         if let Some(renderer) = &self.renderer
             && let Some(content) = &mut self.content_renderer
         {
-            return content.update(&renderer.queue);
+            return content.update(&renderer.device, &renderer.queue);
         }
         None
     }

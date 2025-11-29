@@ -106,6 +106,16 @@ impl ApplicationHandler<GuiCommand> for App {
             WindowEvent::KeyboardInput { event, .. } => {
                 let mut wm = self.window_manager.lock().unwrap();
                 if let Some(handle) = wm.get_handle_from_winit(window_id) {
+                    let should_close = if let Some(window) = wm.get_window_mut(handle) {
+                        window.handle_input(&event)
+                    } else {
+                        false
+                    };
+
+                    if should_close {
+                        wm.close_window(handle);
+                    }
+
                     wm.push_message(WindowMessage::KeyboardInput(handle, event));
                 }
             }
