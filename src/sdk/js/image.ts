@@ -1,23 +1,56 @@
-interface WindowOptions {
-    position?: {
-        x?: number,
-        y?: number,
-        width?: number,
-        height?: number,
-    },
-    alwaysOnTop?: boolean,
-    opacity?: number,
+// @ts-nocheck
+
+/**
+ * Handle to a window displaying an image.
+ */
+class ImageHandle {
+    constructor(id: string) { this.id = id; }
+
+    /**
+     * Closes the window.
+     */
+    async close(): Promise<void> {
+        // TODO: Implement op_close_window with UUID support
+        // await Deno.core.ops.op_close_window(this.id);
+    }
+
+    /**
+     * Sets the opacity of the image window, from 0 (transparent) to 1 (opaque).
+     */
+    async setOpacity(opacity: number): Promise<void> {
+        // TODO: Implement op
+    }
+
+    /**
+     * Moves the image window to the specified (x, y) coordinates.
+     */
+    async moveTo(x: number, y: number): Promise<void> {
+        // TODO: Implement op
+    }
+
+    /**
+     * Resizes the image window to the specified width and height.
+     * Maintains aspect ratio if needed.
+     */
+    async resize(width: number, height: number): Promise<void> {
+        // TODO: Implement op
+    }
 }
 
-interface ImageShowOptions extends WindowOptions {
-    tags?: string[], // Additional tags to filter the images by, e.g., ["nature", "animals"], this will be applied on top of the path
-    closeable?: boolean, // Optional flag to make the image window closeable by the user, defaults to false
-    clickThrough?: boolean, // Optional flag to allow click-through on the image window, defaults to false
-};
+/**
+ * Image display functions
+ */
+class image {
+    /**
+     * Display an image from the pack's assets.
+     * The image is automatically selected based on current mood and optional tags.
+     */
+    static async show(options: ImageOptions): Promise<ImageHandle> {
+        const id = await Deno.core.ops.op_show_image(options);
+        return new ImageHandle(id);
+    }
+}
 
-
-if (!(globalThis as any).goon.image) (globalThis as any).goon.image = {};
-
-(globalThis as any).goon.image.show = async function (options: ImageShowOptions = {}) {
-    return await Deno.core.ops.op_show_image(options);
-};
+(globalThis as any).image = image;
+(globalThis as any).goon = (globalThis as any).goon || {};
+(globalThis as any).goon.image = image;

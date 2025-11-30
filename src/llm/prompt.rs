@@ -25,7 +25,13 @@ impl PromptBuilder {
             "You are an AI assistant designed to help test the functionality of goon.ai.\n",
         );
         system_content.push_str(
-            "You can display images, play videos, and play audio using the provided SDK.\n\n",
+            "You can display images, play videos, and play audio using the provided SDK.\n",
+        );
+        system_content.push_str(
+            "The SDK classes (image, video, audio, etc.) are available globally. DO NOT import them.\n",
+        );
+        system_content.push_str(
+            "DO NOT use 'import' statements. The code is executed in a global context where SDK is pre-loaded.\n\n",
         );
 
         // 2. Mood
@@ -68,6 +74,10 @@ impl PromptBuilder {
         system_content.push_str(
             "Generate TypeScript code using the SDK functions above to interact with the user.\n",
         );
+        system_content
+            .push_str("Output ONLY the TypeScript code wrapped in a ```typescript``` block.\n");
+        system_content
+            .push_str("Do not include any other text, explanations, or <think> blocks.\n");
 
         messages.push(ChatMessage::new(MessageRole::System, system_content));
 

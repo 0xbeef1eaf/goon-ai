@@ -30,9 +30,19 @@ impl WallpaperSetter for LinuxWallpaperSetter {
             }
 
             let path = if uri_str.starts_with("file://") {
-                let url = Url::parse(&uri_str)?;
-                url.to_file_path()
-                    .map_err(|_| anyhow!("Failed to convert URL to file path"))?
+                match Url::parse(&uri_str) {
+                    Ok(url) => url
+                        .to_file_path()
+                        .map_err(|_| anyhow!("Failed to convert URL to file path"))?,
+                    Err(_) => {
+                        // Fallback for invalid URLs (e.g. unencoded spaces)
+                        let path_str = uri_str.trim_start_matches("file://");
+                        // Simple percent decoding if needed, but for now just take it as is
+                        // or try to decode %20 to space
+                        let decoded = path_str.replace("%20", " ");
+                        PathBuf::from(decoded)
+                    }
+                }
             } else {
                 PathBuf::from(uri_str)
             };
@@ -66,9 +76,16 @@ impl WallpaperSetter for LinuxWallpaperSetter {
                 .ok_or_else(|| anyhow!("Empty wallpaper URI"))?;
 
             let path = if first_uri.starts_with("file://") {
-                let url = Url::parse(first_uri)?;
-                url.to_file_path()
-                    .map_err(|_| anyhow!("Failed to convert URL to file path"))?
+                match Url::parse(first_uri) {
+                    Ok(url) => url
+                        .to_file_path()
+                        .map_err(|_| anyhow!("Failed to convert URL to file path"))?,
+                    Err(_) => {
+                        let path_str = first_uri.trim_start_matches("file://");
+                        let decoded = path_str.replace("%20", " ");
+                        PathBuf::from(decoded)
+                    }
+                }
             } else {
                 PathBuf::from(first_uri)
             };
@@ -132,7 +149,9 @@ impl WallpaperSetter for LinuxWallpaperSetter {
             .to_lowercase();
 
         if desktop.contains("gnome") || desktop.contains("unity") || desktop.contains("pantheon") {
-            let uri = format!("file://{}", path_str);
+            let uri = Url::from_file_path(path)
+                .map_err(|_| anyhow!("Failed to convert path to URL"))?
+                .to_string();
             // Try setting both light and dark mode
             let _ = Command::new("gsettings")
                 .args(["set", "org.gnome.desktop.background", "picture-uri", &uri])
@@ -147,6 +166,9 @@ impl WallpaperSetter for LinuxWallpaperSetter {
                 .output();
             Ok(())
         } else if desktop.contains("kde") || desktop.contains("plasma") {
+            let uri = Url::from_file_path(path)
+                .map_err(|_| anyhow!("Failed to convert path to URL"))?
+                .to_string();
             let script = format!(
                 r#"
                 var allDesktops = desktops();
@@ -154,10 +176,10 @@ impl WallpaperSetter for LinuxWallpaperSetter {
                     d = allDesktops[i];
                     d.wallpaperPlugin = "org.kde.image";
                     d.currentConfigGroup = Array("Wallpaper", "org.kde.image", "General");
-                    d.writeConfig("Image", "file://{}");
+                    d.writeConfig("Image", "{}");
                 }}
                 "#,
-                path_str
+                uri
             );
             Command::new("qdbus")
                 .args([

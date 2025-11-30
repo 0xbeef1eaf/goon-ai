@@ -172,18 +172,86 @@ impl Orchestrator {
 }
 
 fn extract_code_block(response: &str) -> Option<String> {
-    // Simple extractor for ```typescript ... ``` or ``` ... ```
-    if let Some(start) = response.find("```") {
-        let rest = &response[start + 3..];
-        let end = rest.find("```")?;
-        let content = &rest[..end];
-        // Strip language identifier if present
-        if let Some(newline) = content.find('\n') {
-            Some(content[newline + 1..].to_string())
+    // Remove <think> blocks
+    let mut clean_response = response.to_string();
+    while let Some(start) = clean_response.find("<think>") {
+        if let Some(end) = clean_response[start..].find("</think>") {
+            clean_response.replace_range(start..start + end + 8, "");
         } else {
-            Some(content.to_string())
+            break;
         }
+    }
+
+    // Extract code block
+    let code = if let Some(start) = clean_response.find("```typescript") {
+        let rest = &clean_response[start + 13..];
+        rest.find("```").map(|end| rest[..end].trim().to_string())
+    } else if let Some(start) = clean_response.find("```") {
+        let rest = &clean_response[start + 3..];
+        if let Some(end) = rest.find("```") {
+            // Strip language identifier if present (e.g. "ts\n")
+            if let Some(newline) = rest[..end].find('\n') {
+                Some(rest[newline + 1..end].trim().to_string())
+            } else {
+                Some(rest[..end].trim().to_string())
+            }
+        } else {
+            None
+        }
+    } else if !clean_response.trim().is_empty() {
+        Some(clean_response.trim().to_string())
     } else {
         None
+    };
+
+    // Strip imports from the extracted code
+    if let Some(code) = code {
+        let lines: Vec<&str> = code
+            .lines()
+            .filter(|line| !line.trim().starts_with("import "))
+            .collect();
+        Some(lines.join("\n"))
+    } else {
+        None
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_extract_code_block() {
+        let response = "Here is the code:\n```typescript\nconsole.log('hello');\n```";
+        assert_eq!(
+            extract_code_block(response),
+            Some("console.log('hello');".to_string())
+        );
+
+        let response_with_think =
+            "<think>Some thinking...</think>\n```typescript\nconsole.log('hello');\n```";
+        assert_eq!(
+            extract_code_block(response_with_think),
+            Some("console.log('hello');".to_string())
+        );
+
+        let response_no_lang = "```\nconsole.log('hello');\n```";
+        assert_eq!(
+            extract_code_block(response_no_lang),
+            Some("console.log('hello');".to_string())
+        );
+
+        let response_raw = "console.log('hello');";
+        assert_eq!(
+            extract_code_block(response_raw),
+            Some("console.log('hello');".to_string())
+        );
+
+        let response_with_imports =
+            "```typescript\nimport { image } from './sdk';\nconsole.log('hello');\n```";
+        assert_eq!(
+            extract_code_block(response_with_imports),
+            Some("console.log('hello');".to_string())
+        );
     }
 }

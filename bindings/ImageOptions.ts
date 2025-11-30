@@ -2,4 +2,15 @@
 import type { Position } from "./Position";
 import type { Size } from "./Size";
 
-export type ImageOptions = { tags: Array<string> | null, duration: bigint | null, opacity: number | null, position: Position | null, size: Size | null, alwaysOnTop: boolean | null, clickThrough: boolean | null, decorations: boolean | null, };
+/**
+ * Options for displaying an image
+ */
+export type ImageOptions = {
+/**
+ * Tags to filter the images by
+ */
+tags: Array<string> | null,
+/**
+ * Duration to display the image in seconds
+ */
+duration: bigint | null, opacity: number | null, position: Position | null, size: Size | null, alwaysOnTop: boolean | null, clickThrough: boolean | null, decorations: boolean | null, };

@@ -21,8 +21,11 @@ use ts_rs::TS;
 #[derive(Deserialize, Debug, Default, TS)]
 #[ts(export)]
 #[serde(rename_all = "camelCase")]
+/// Options for displaying an image
 pub struct ImageOptions {
+    /// Tags to filter the images by
     pub tags: Option<Vec<String>>,
+    /// Duration to display the image in seconds
     pub duration: Option<u64>,
     #[serde(flatten)]
     pub window: WindowOptions,
