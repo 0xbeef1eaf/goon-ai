@@ -1,23 +1,11 @@
-interface WindowOptions {
-    position?: {
-        x?: number,
-        y?: number,
-        width?: number,
-        height?: number,
-    },
-    alwaysOnTop?: boolean,
-    opacity?: number,
+// @ts-nocheck
+
+class hypno {
+    static async show(options: HypnoShowOptions): Promise<void> {
+        await Deno.core.ops.op_show_hypno(options);
+    }
 }
 
-interface HypnoShowOptions extends WindowOptions {
-    tags?: string[],
-    duration?: number,
-    closeable?: boolean,
-    clickThrough?: boolean,
-}
-
-if (!(globalThis as any).goon.hypno) (globalThis as any).goon.hypno = {};
-
-(globalThis as any).goon.hypno.show = async function(options: HypnoShowOptions = {}) {
-    return await Deno.core.ops.op_show_hypno(options);
-};
+(globalThis as any).hypno = hypno;
+(globalThis as any).goon = (globalThis as any).goon || {};
+(globalThis as any).goon.hypno = hypno;

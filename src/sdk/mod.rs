@@ -5,6 +5,7 @@ use crate::permissions::{Permission, PermissionChecker};
 pub mod audio;
 pub mod hypno;
 pub mod image;
+pub mod pack;
 pub mod prompt;
 pub mod system;
 pub mod video;
@@ -23,6 +24,7 @@ pub fn get_all_typescript_sources() -> Vec<String> {
     vec![
         INIT_SOURCE.to_string(),
         image::TS_SOURCE.to_string(),
+        pack::TS_SOURCE.to_string(),
         video::TS_SOURCE.to_string(),
         audio::TS_SOURCE.to_string(),
         hypno::TS_SOURCE.to_string(),

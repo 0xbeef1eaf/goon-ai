@@ -155,7 +155,7 @@ async fn test_asset_loading_to_permission_check() {
 
     let code_video = r#"
         (async () => {
-            await goon.video.show({ tags: ["default"] });
+            await goon.video.play({ tags: ["default"] });
         })()
     "#;
 

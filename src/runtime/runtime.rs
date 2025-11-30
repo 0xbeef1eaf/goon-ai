@@ -6,7 +6,7 @@ use crate::media::video::manager::VideoManager;
 use crate::permissions::PermissionChecker;
 use crate::sdk;
 use crate::sdk::{
-    audio::goon_audio, hypno::goon_hypno, image::goon_image, prompt::goon_prompt,
+    audio::goon_audio, hypno::goon_hypno, image::goon_image, pack::goon_pack, prompt::goon_prompt,
     system::goon_system, video::goon_video, wallpaper::goon_wallpaper, website::goon_website,
 };
 use crate::typescript::TypeScriptCompiler;
@@ -42,6 +42,7 @@ impl GoonRuntime {
         let mut js_runtime = JsRuntime::new(RuntimeOptions {
             extensions: vec![
                 goon_system::init(),
+                goon_pack::init(),
                 goon_image::init(),
                 goon_video::init(),
                 goon_audio::init(),
@@ -83,7 +84,9 @@ impl GoonRuntime {
         for source in sources {
             match compiler.compile(&source) {
                 Ok(js_code) => {
-                    let _ = js_runtime.execute_script("sdk_bridge.js", js_code);
+                    if let Err(e) = js_runtime.execute_script("sdk_bridge.js", js_code) {
+                        eprintln!("Failed to execute SDK bridge code: {}", e);
+                    }
                 }
                 Err(e) => {
                     eprintln!("Failed to compile SDK bridge code: {}", e);
@@ -98,19 +101,30 @@ impl GoonRuntime {
     }
 
     pub async fn execute_script(&mut self, code: &str) -> Result<()> {
-        // We wrap the code in an async IIFE to support top-level await if needed,
-        // but module loading handles top-level await natively.
-        // Using load_main_es_module_from_code is better for modern JS.
+        // We wrap the code in an async IIFE to support top-level await
+        // and ensure we handle the promise result.
+        // We also need to strip import statements as we are running as a script.
 
-        let main_module = deno_core::resolve_path("main.js", &std::env::current_dir()?)?;
-        let mod_id = self
+        // Simple strip of import lines (this is a heuristic)
+        let code_lines: Vec<&str> = code
+            .lines()
+            .filter(|line| !line.trim().starts_with("import "))
+            .collect();
+        let clean_code = code_lines.join("\n");
+
+        let wrapped_code = format!("(async () => {{ {} }})()", clean_code);
+
+        // execute_script returns the result of the expression
+        let promise = self
             .js_runtime
-            .load_main_es_module_from_code(&main_module, code.to_string())
-            .await?;
+            .execute_script("user_script.js", wrapped_code)?;
 
-        let result = self.js_runtime.mod_evaluate(mod_id);
+        // Resolve the promise (await it)
+        let _result = self.js_runtime.resolve(promise).await?;
+
+        // Run event loop to handle any pending ops
         self.js_runtime.run_event_loop(Default::default()).await?;
-        result.await?;
+
         Ok(())
     }
 }
@@ -203,5 +217,51 @@ mod tests {
         assert!(result.is_err());
         let err = result.unwrap_err();
         assert!(err.to_string().contains("Permission denied"));
+    }
+
+    #[tokio::test]
+    async fn test_pack_availability() {
+        let mut set = PermissionSet::new();
+        set.add(Permission::Image); // Just some permission
+        let permissions = PermissionChecker::new(set);
+
+        let gui_controller = Arc::new(MockGuiController);
+        let registry = Arc::new(AssetRegistry::new());
+        let mood = Mood {
+            name: "TestMood".to_string(),
+            description: "A test mood".to_string(),
+            tags: vec!["tag1".to_string()],
+        };
+        let context = RuntimeContext {
+            permissions,
+            gui_controller,
+            registry,
+            mood,
+            max_audio_concurrent: 10,
+            max_video_concurrent: 3,
+        };
+        let mut runtime = GoonRuntime::new(context);
+
+        let code = r#"
+            const mood = await goon.pack.getCurrentMood();
+            if (mood.name !== "TestMood") {
+                throw new Error("Wrong mood name: " + mood.name);
+            }
+            if (mood.tags[0] !== "tag1") {
+                throw new Error("Wrong mood tag: " + mood.tags[0]);
+            }
+
+            await goon.pack.setMood("NewMood");
+            const newMood = await goon.pack.getCurrentMood();
+            if (newMood.name !== "NewMood") {
+                throw new Error("Failed to set mood: " + newMood.name);
+            }
+        "#;
+
+        let result = runtime.execute_script(code).await;
+        if let Err(e) = &result {
+            eprintln!("Test failed: {}", e);
+        }
+        assert!(result.is_ok());
     }
 }

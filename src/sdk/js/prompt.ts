@@ -1,31 +1,33 @@
-interface WindowOptions {
-    opacity?: number;
-    position?: { x: number; y: number };
-    size?: { width: number; height: number };
-    alwaysOnTop?: boolean;
-    clickThrough?: boolean;
-    decorations?: boolean;
-}
+// @ts-nocheck
 
-interface PromptOptions extends WindowOptions {
-    text?: string; // Optional here because it might be passed as first arg
-    fontSize?: number;
-    color?: [number, number, number, number];
-    background?: [number, number, number, number];
-    padding?: number;
-    maxWidth?: number;
-    alignment?: "left" | "center" | "right";
-    duration?: number;
-}
-
-if (!(globalThis as any).goon.prompt) (globalThis as any).goon.prompt = {};
-
-(globalThis as any).goon.prompt.show = async function (textOrOptions: string | PromptOptions, options?: PromptOptions) {
-    let finalOptions: PromptOptions;
-    if (typeof textOrOptions === 'string') {
-        finalOptions = { text: textOrOptions, ...options };
-    } else {
-        finalOptions = textOrOptions;
+/**
+ * Text prompt with optional image display
+ */
+class textPrompt {
+    /**
+     * Displays a text prompt in a window, with optional image.
+     * The window will close when the user has copied the text into the prompt window.
+     *
+     * Note: This ignores the following ImageOptions properties:
+     * - position: Always centers the window on screen
+     * - timeout: Window remains until user copies text
+     * - closable: Window only closes when user copies text
+     *
+     * The image will be displayed below the text if provided.
+     *
+     * @param options The prompt options
+     * @returns Window handle
+     */
+    static async show(options: PromptOptions): Promise<WindowHandle> {
+        const id = await Deno.core.ops.op_show_prompt(options);
+        return {
+            close: async () => {
+                // TODO
+            }
+        };
     }
-    return await Deno.core.ops.op_show_prompt(finalOptions);
-};
+}
+
+(globalThis as any).textPrompt = textPrompt;
+(globalThis as any).goon = (globalThis as any).goon || {};
+(globalThis as any).goon.textPrompt = textPrompt;

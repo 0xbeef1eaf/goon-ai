@@ -16,6 +16,12 @@ pub fn get_modules() -> Vec<SdkModule> {
             dependencies: vec![],
         },
         SdkModule {
+            name: "system",
+            template: templates::system_ts(),
+            permission: None, // Always included
+            dependencies: vec![],
+        },
+        SdkModule {
             name: "pack",
             template: templates::pack_ts(),
             permission: None, // Always included
@@ -37,6 +43,12 @@ pub fn get_modules() -> Vec<SdkModule> {
             name: "audio",
             template: templates::audio_ts(),
             permission: Some("audio"),
+            dependencies: vec!["types"],
+        },
+        SdkModule {
+            name: "hypno",
+            template: templates::hypno_ts(),
+            permission: Some("hypno"),
             dependencies: vec!["types"],
         },
         SdkModule {

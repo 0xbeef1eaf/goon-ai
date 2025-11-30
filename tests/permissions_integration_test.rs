@@ -107,7 +107,7 @@ async fn test_full_permission_flow() {
 
     let denied_code = r#"
         (async () => {
-            await goon.video.show({ tags: ["default"] });
+            await goon.video.play({ tags: ["default"] });
         })()
     "#;
 
