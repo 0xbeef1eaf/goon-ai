@@ -90,6 +90,8 @@ jobs:
   merge-dependabot:
     name: Merge Dependabot PRs
     runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
     needs: [test, fmt, clippy]
     if: github.actor == 'dependabot[bot]'
     steps:
