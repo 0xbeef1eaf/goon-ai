@@ -38,6 +38,7 @@ impl GoonRuntime {
                 (None, None)
             }
         };
+        // let (audio_stream, stream_handle): (Option<OutputStream>, Option<rodio::OutputStreamHandle>) = (None, None);
 
         let mut js_runtime = JsRuntime::new(RuntimeOptions {
             extensions: vec![
@@ -115,12 +116,9 @@ impl GoonRuntime {
         let wrapped_code = format!("(async () => {{ {} }})()", clean_code);
 
         // execute_script returns the result of the expression
-        let promise = self
+        let _promise = self
             .js_runtime
             .execute_script("user_script.js", wrapped_code)?;
-
-        // Resolve the promise (await it)
-        let _result = self.js_runtime.resolve(promise).await?;
 
         // Run event loop to handle any pending ops
         self.js_runtime.run_event_loop(Default::default()).await?;
