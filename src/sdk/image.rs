@@ -12,7 +12,6 @@ use crate::sdk::types::WindowOptions;
 use deno_core::OpState;
 use deno_core::op2;
 use serde::Deserialize;
-use serde_json;
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::Arc;
@@ -35,7 +34,7 @@ pub struct ImageOptions {
 #[string]
 pub async fn op_show_image(
     state: Rc<RefCell<OpState>>,
-    #[serde] options: Option<serde_json::Value>,
+    #[serde] options: Option<ImageOptions>,
 ) -> Result<String, OpError> {
     let (gui_controller, registry, mood) = {
         let mut state = state.borrow_mut();
@@ -46,11 +45,7 @@ pub async fn op_show_image(
         (gui, registry, mood)
     };
 
-    let opts: ImageOptions = if let Some(o) = options {
-        serde_json::from_value(o).map_err(|e| OpError::new(&e.to_string()))?
-    } else {
-        ImageOptions::default()
-    };
+    let opts = options.unwrap_or_default();
 
     let tags = opts.tags.unwrap_or_default();
     let selector = AssetSelector::new(&registry);

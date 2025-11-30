@@ -115,12 +115,9 @@ impl GoonRuntime {
         let wrapped_code = format!("(async () => {{ {} }})()", clean_code);
 
         // execute_script returns the result of the expression
-        let promise = self
+        let _promise = self
             .js_runtime
             .execute_script("user_script.js", wrapped_code)?;
-
-        // Resolve the promise (await it)
-        let _result = self.js_runtime.resolve(promise).await?;
 
         // Run event loop to handle any pending ops
         self.js_runtime.run_event_loop(Default::default()).await?;
@@ -184,6 +181,48 @@ mod tests {
         "#;
 
         let result = runtime.execute_script(code).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_bigint_duration() {
+        let mut set = PermissionSet::new();
+        set.add(Permission::Image);
+        let permissions = PermissionChecker::new(set);
+
+        let gui_controller = Arc::new(MockGuiController);
+        let registry = Arc::new(AssetRegistry::new());
+        let mood = Mood {
+            name: "Test".to_string(),
+            description: "".to_string(),
+            tags: vec![],
+        };
+        let context = RuntimeContext {
+            permissions,
+            gui_controller,
+            registry,
+            mood,
+            max_audio_concurrent: 10,
+            max_video_concurrent: 3,
+        };
+        let mut runtime = GoonRuntime::new(context);
+
+        let code = r#"
+            try {
+                await goon.image.show({ tags: [], duration: 10n });
+            } catch (e) {
+                if (e.message.includes("No image found")) {
+                    // This is expected as registry is empty
+                } else {
+                    throw e;
+                }
+            }
+        "#;
+
+        let result = runtime.execute_script(code).await;
+        if let Err(e) = &result {
+            eprintln!("Test failed: {}", e);
+        }
         assert!(result.is_ok());
     }
 
