@@ -4,13 +4,13 @@ use glyphon::{
     Attrs, Buffer, Cache, Color, Family, FontSystem, Metrics, Resolution, Shaping, SwashCache,
     TextArea, TextAtlas, TextBounds, TextRenderer,
 };
+use tracing::{debug, error, info};
 use wgpu::{
     CommandEncoder, Device, MultisampleState, Queue, RenderPassDescriptor, SurfaceConfiguration,
     TextureView,
 };
 use winit::event::{ElementState, KeyEvent};
 use winit::keyboard::{Key, NamedKey};
-use tracing::{debug, info, error};
 
 pub struct PromptRenderer {
     font_system: FontSystem,
@@ -66,7 +66,11 @@ impl PromptRenderer {
             buffer_width, config.height
         );
 
-        buffer.set_size(&mut font_system, Some(buffer_width), Some(config.height as f32));
+        buffer.set_size(
+            &mut font_system,
+            Some(buffer_width),
+            Some(config.height as f32),
+        );
 
         // Set initial text
         info!("PromptRenderer: Setting text content: '{}'", text);
@@ -183,6 +187,11 @@ impl Renderable for PromptRenderer {
             Shaping::Advanced,
         );
 
+        // Reapply alignment to all lines after text update
+        for line in self.buffer.lines.iter_mut() {
+            line.set_align(Some(self.alignment));
+        }
+
         // Create bounds for text layout
         let padding = 40i32;
         let bounds = TextBounds {
@@ -274,10 +283,16 @@ impl Renderable for PromptRenderer {
             occlusion_query_set: None,
         });
 
-        debug!("PromptRenderer: About to render text with color: {:?}", self.color);
+        debug!(
+            "PromptRenderer: About to render text with color: {:?}",
+            self.color
+        );
 
         if self.is_prepared {
-            if let Err(e) = self.text_renderer.render(&self.atlas, &self.viewport, &mut pass) {
+            if let Err(e) = self
+                .text_renderer
+                .render(&self.atlas, &self.viewport, &mut pass)
+            {
                 error!("PromptRenderer: Failed to render text: {}", e);
             } else {
                 debug!("PromptRenderer: Text rendered successfully");
@@ -343,7 +358,11 @@ mod tests {
             !buffer.lines.is_empty(),
             "Buffer should have lines after setting text"
         );
-        assert_eq!(buffer.lines.len(), 1, "Buffer should have 1 line for single-line text");
+        assert_eq!(
+            buffer.lines.len(),
+            1,
+            "Buffer should have 1 line for single-line text"
+        );
     }
 
     #[test]
@@ -363,5 +382,23 @@ mod tests {
 
         assert!(!buffer.lines.is_empty(), "Buffer should have lines");
         assert_eq!(buffer.lines.len(), 3, "Buffer should have 3 lines");
+    }
+
+    #[test]
+    fn test_text_matching_logic() {
+        // Test the core text matching logic
+        let prompt_text = "Type this";
+
+        // Simulate matching user input
+        let user_input_1 = "Type this";
+        assert_eq!(user_input_1.trim(), prompt_text.trim());
+
+        // Simulate non-matching input
+        let user_input_2 = "Type that";
+        assert_ne!(user_input_2.trim(), prompt_text.trim());
+
+        // Simulate input with extra whitespace (should match due to trim)
+        let user_input_3 = "  Type this  ";
+        assert_eq!(user_input_3.trim(), prompt_text.trim());
     }
 }

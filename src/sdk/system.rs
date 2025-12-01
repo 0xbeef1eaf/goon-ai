@@ -35,7 +35,10 @@ pub async fn op_get_asset(
 }
 
 #[op2(async)]
-pub async fn op_close_window(state: Rc<RefCell<OpState>>, #[string] handle: String) -> Result<(), OpError> {
+pub async fn op_close_window(
+    state: Rc<RefCell<OpState>>,
+    #[string] handle: String,
+) -> Result<(), OpError> {
     let gui_controller = {
         let state = state.borrow();
         state.borrow::<Arc<dyn GuiInterface>>().clone()
