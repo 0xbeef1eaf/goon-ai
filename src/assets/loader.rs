@@ -115,6 +115,7 @@ mod tests {
                 wallpaper: None,
             },
             websites: None,
+            prompts: None,
         };
 
         let registry = AssetLoader::load(&pack_config, "Test Pack").unwrap();

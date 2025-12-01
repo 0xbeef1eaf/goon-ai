@@ -1,0 +1,40 @@
+import { VerticalBox, HorizontalBox } from "std-widgets.slint";
+
+export component PromptWindow inherits Window {
+    in property <string> prompt-text;
+    in property <color> text-color;
+    in property <color> background-color;
+    in property <float> font-size;
+    in property <string> user-input;
+    in property <bool> show-cursor;
+    in property <string> alignment: "left";
+
+    Rectangle {
+        background: root.background-color;
+
+        VerticalBox {
+            padding: 40px;
+            spacing: 20px;
+
+            // Main prompt text
+            Text {
+                text: root.prompt-text;
+                color: root.text-color;
+                font-size: root.font-size * 1px;
+                wrap: word-wrap;
+                horizontal-alignment: root.alignment == "center" ? center :
+                                      root.alignment == "right" ? right : left;
+            }
+
+            // User input display (if any)
+            if root.user-input != "" : Text {
+                text: "You typed: " + root.user-input + (root.show-cursor ? "▌" : "");
+                color: root.text-color;
+                font-size: (root.font-size * 0.8) * 1px;
+                wrap: word-wrap;
+                horizontal-alignment: root.alignment == "center" ? center :
+                                      root.alignment == "right" ? right : left;
+            }
+        }
+    }
+}

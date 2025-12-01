@@ -1,6 +1,6 @@
 use crate::assets::registry::AssetRegistry;
 use crate::config::pack::Mood;
-use crate::gui::window_manager::GuiInterface;
+use crate::gui::slint_controller::SlintGuiController;
 use crate::media::audio::manager::AudioManager;
 use crate::media::video::manager::VideoManager;
 use crate::permissions::PermissionChecker;
@@ -17,7 +17,7 @@ use std::sync::{Arc, Mutex};
 
 pub struct RuntimeContext {
     pub permissions: PermissionChecker,
-    pub gui_controller: Arc<dyn GuiInterface>,
+    pub gui_controller: Arc<SlintGuiController>,
     pub registry: Arc<AssetRegistry>,
     pub mood: Mood,
     pub max_audio_concurrent: usize,
@@ -129,27 +129,8 @@ impl GoonRuntime {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::gui::content::ContentConstructor;
-    use crate::gui::window_manager::{GuiInterface, WindowHandle, WindowOptions};
+    use crate::gui::slint_controller::SlintGuiController;
     use crate::permissions::{Permission, PermissionChecker, PermissionSet};
-
-    struct MockGuiController;
-
-    impl GuiInterface for MockGuiController {
-        fn create_window(&self, _options: WindowOptions) -> Result<WindowHandle> {
-            Ok(WindowHandle(uuid::Uuid::new_v4()))
-        }
-        fn close_window(&self, _handle: WindowHandle) -> Result<()> {
-            Ok(())
-        }
-        fn set_content(
-            &self,
-            _handle: WindowHandle,
-            _content: Box<dyn ContentConstructor>,
-        ) -> Result<()> {
-            Ok(())
-        }
-    }
 
     #[tokio::test]
     async fn test_runtime_execution() {
@@ -157,7 +138,7 @@ mod tests {
         set.add(Permission::Image);
         let permissions = PermissionChecker::new(set);
 
-        let gui_controller = Arc::new(MockGuiController);
+        let gui_controller = Arc::new(SlintGuiController::new());
         let registry = Arc::new(AssetRegistry::new());
         let mood = Mood {
             name: "Test".to_string(),
@@ -191,7 +172,7 @@ mod tests {
         set.add(Permission::Image);
         let permissions = PermissionChecker::new(set);
 
-        let gui_controller = Arc::new(MockGuiController);
+        let gui_controller = Arc::new(SlintGuiController::new());
         let registry = Arc::new(AssetRegistry::new());
         let mood = Mood {
             name: "Test".to_string(),
@@ -233,7 +214,7 @@ mod tests {
         let set = PermissionSet::new(); // No permissions
         let permissions = PermissionChecker::new(set);
 
-        let gui_controller = Arc::new(MockGuiController);
+        let gui_controller = Arc::new(SlintGuiController::new());
         let registry = Arc::new(AssetRegistry::new());
         let mood = Mood {
             name: "Test".to_string(),
@@ -267,7 +248,7 @@ mod tests {
         set.add(Permission::Image); // Just some permission
         let permissions = PermissionChecker::new(set);
 
-        let gui_controller = Arc::new(MockGuiController);
+        let gui_controller = Arc::new(SlintGuiController::new());
         let registry = Arc::new(AssetRegistry::new());
         let mood = Mood {
             name: "TestMood".to_string(),

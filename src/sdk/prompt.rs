@@ -1,5 +1,5 @@
+use crate::gui::slint_controller::{SlintGuiController, set_prompt_content};
 use crate::gui::window_manager::GuiInterface;
-use crate::media::prompt::renderer::PromptContent;
 use crate::runtime::error::OpError;
 use crate::runtime::utils::check_permission;
 use crate::sdk::types::WindowOptions;
@@ -10,6 +10,7 @@ use serde_json;
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::Arc;
+use tracing::{debug, error, info};
 use ts_rs::TS;
 
 #[derive(Deserialize, Debug, Default, TS)]
@@ -34,32 +35,28 @@ pub async fn op_show_prompt(
     state: Rc<RefCell<OpState>>,
     #[serde] options: Option<serde_json::Value>,
 ) -> Result<String, OpError> {
+    info!("op_show_prompt called");
     let gui_controller = {
         let mut state = state.borrow_mut();
         check_permission(&mut state, "prompt")?;
-        state.borrow::<Arc<dyn GuiInterface>>().clone()
+        state.borrow::<Arc<SlintGuiController>>().clone()
     };
 
     let opts: PromptOptions = if let Some(o) = options {
-        serde_json::from_value(o).map_err(|e| OpError::new(&e.to_string()))?
+        debug!("op_show_prompt options: {:?}", o);
+        serde_json::from_value(o).map_err(|e| {
+            error!("Failed to parse prompt options: {}", e);
+            OpError::new(&e.to_string())
+        })?
     } else {
+        error!("Prompt options missing");
         return Err(OpError::new("Prompt options required"));
     };
 
-    let alignment = match opts.alignment.as_deref() {
-        Some("center") => glyphon::cosmic_text::Align::Center,
-        Some("right") => glyphon::cosmic_text::Align::End,
-        _ => glyphon::cosmic_text::Align::Left,
-    };
-
-    let content = PromptContent {
-        text: opts.text.clone(),
-        font_size: opts.font_size.unwrap_or(32.0),
-        color: opts.color.unwrap_or([1.0, 1.0, 1.0, 1.0]),
-        background_color: opts.background,
-        max_width: opts.max_width,
-        alignment,
-    };
+    let alignment = opts.alignment.unwrap_or_else(|| "left".to_string());
+    let font_size = opts.font_size.unwrap_or(32.0);
+    let color = opts.color.unwrap_or([1.0, 1.0, 1.0, 1.0]);
+    let background = opts.background;
 
     let window_opts = crate::gui::window_manager::WindowOptions {
         size: opts
@@ -76,14 +73,28 @@ pub async fn op_show_prompt(
         ..Default::default()
     };
 
-    let handle = gui_controller
-        .create_window(window_opts)
-        .map_err(|e| OpError::new(&e.to_string()))?;
+    info!("Creating prompt window with options: {:?}", window_opts);
+    let handle = gui_controller.create_window(window_opts).map_err(|e| {
+        error!("Failed to create prompt window: {}", e);
+        OpError::new(&e.to_string())
+    })?;
 
-    gui_controller
-        .set_content(handle, Box::new(content))
-        .map_err(|e| OpError::new(&e.to_string()))?;
+    info!("Setting prompt content for window: {:?}", handle);
+    set_prompt_content(
+        &gui_controller,
+        handle,
+        &opts.text,
+        font_size,
+        color,
+        background,
+        &alignment,
+    )
+    .map_err(|e| {
+        error!("Failed to set prompt content: {}", e);
+        OpError::new(&e.to_string())
+    })?;
 
+    info!("Prompt window created successfully: {:?}", handle);
     Ok(handle.0.to_string())
 }
 

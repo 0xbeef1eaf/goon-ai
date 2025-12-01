@@ -10,8 +10,7 @@ class ImageHandle {
      * Closes the window.
      */
     async close(): Promise<void> {
-        // TODO: Implement op_close_window with UUID support
-        // await Deno.core.ops.op_close_window(this.id);
+        await Deno.core.ops.op_close_window(this.id);
     }
 
     /**

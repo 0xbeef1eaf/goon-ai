@@ -1,3 +1,4 @@
+use crate::gui::slint_controller::SlintGuiController;
 use crate::gui::window_manager::{GuiInterface, WindowHandle};
 use crate::runtime::error::OpError;
 use deno_core::OpState;
@@ -41,7 +42,7 @@ pub async fn op_close_window(
 ) -> Result<(), OpError> {
     let gui_controller = {
         let state = state.borrow();
-        state.borrow::<Arc<dyn GuiInterface>>().clone()
+        state.borrow::<Arc<SlintGuiController>>().clone()
     };
 
     let uuid = Uuid::parse_str(&handle).map_err(|e| OpError::new(&e.to_string()))?;

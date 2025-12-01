@@ -40,27 +40,8 @@ impl Executor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::gui::content::ContentConstructor;
-    use crate::gui::window_manager::{GuiInterface, WindowHandle, WindowOptions};
+    use crate::gui::slint_controller::SlintGuiController;
     use crate::permissions::{PermissionChecker, PermissionSet};
-
-    struct MockGuiController;
-
-    impl GuiInterface for MockGuiController {
-        fn create_window(&self, _options: WindowOptions) -> Result<WindowHandle> {
-            Ok(WindowHandle(uuid::Uuid::new_v4()))
-        }
-        fn close_window(&self, _handle: WindowHandle) -> Result<()> {
-            Ok(())
-        }
-        fn set_content(
-            &self,
-            _handle: WindowHandle,
-            _content: Box<dyn ContentConstructor>,
-        ) -> Result<()> {
-            Ok(())
-        }
-    }
 
     #[tokio::test]
     async fn test_executor_run() {
@@ -68,12 +49,13 @@ mod tests {
         let set = PermissionSet::new();
         let permissions = PermissionChecker::new(set);
 
-        let gui_controller = Arc::new(MockGuiController);
+        let gui_controller = Arc::new(SlintGuiController::new());
         let registry = Arc::new(AssetRegistry::new());
         let mood = Mood {
             name: "Test".to_string(),
             description: "".to_string(),
             tags: vec![],
+            prompt: None,
         };
 
         let context = crate::runtime::runtime::RuntimeContext {
@@ -98,12 +80,13 @@ mod tests {
         let set = PermissionSet::new();
         let permissions = PermissionChecker::new(set);
 
-        let gui_controller = Arc::new(MockGuiController);
+        let gui_controller = Arc::new(SlintGuiController::new());
         let registry = Arc::new(AssetRegistry::new());
         let mood = Mood {
             name: "Test".to_string(),
             description: "".to_string(),
             tags: vec![],
+            prompt: None,
         };
 
         let context = crate::runtime::runtime::RuntimeContext {

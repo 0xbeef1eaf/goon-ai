@@ -41,6 +41,7 @@ pub fn op_set_current_mood(
         name: mood_name,
         description: String::new(),
         tags: Vec::new(),
+        prompt: None,
     };
 
     state.put(new_mood);

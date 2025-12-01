@@ -12,7 +12,10 @@ pub struct Renderer {
 
 impl Renderer {
     pub async fn new(window: Arc<Window>) -> Result<Self> {
-        let instance = wgpu::Instance::default();
+        let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
+            backends: wgpu::Backends::VULKAN,
+            ..Default::default()
+        });
 
         let surface = instance.create_surface(window.clone())?;
 
@@ -24,6 +27,8 @@ impl Renderer {
             })
             .await
             .context("No suitable adapter found")?;
+
+        tracing::info!("Renderer: Using adapter: {:?}", adapter.get_info());
 
         let (device, queue) = adapter
             .request_device(&wgpu::DeviceDescriptor {
@@ -37,6 +42,12 @@ impl Renderer {
 
         let size = window.inner_size();
         let caps = surface.get_capabilities(&adapter);
+        tracing::info!(
+            "Renderer: Available present modes: {:?}",
+            caps.present_modes
+        );
+        tracing::info!("Renderer: Available alpha modes: {:?}", caps.alpha_modes);
+
         let format = caps
             .formats
             .iter()
@@ -44,16 +55,33 @@ impl Renderer {
             .find(|f| f.is_srgb())
             .unwrap_or(caps.formats[0]);
 
+        // Prefer transparent alpha modes
+        let alpha_mode = caps
+            .alpha_modes
+            .iter()
+            .copied()
+            .find(|&m| m == wgpu::CompositeAlphaMode::PreMultiplied)
+            .unwrap_or(caps.alpha_modes[0]);
+
+        let present_mode = wgpu::PresentMode::Fifo;
+
         let config = wgpu::SurfaceConfiguration {
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
             format,
             width: size.width,
             height: size.height,
-            present_mode: caps.present_modes[0],
-            alpha_mode: caps.alpha_modes[0],
+            present_mode,
+            alpha_mode,
             view_formats: vec![],
             desired_maximum_frame_latency: 2,
         };
+
+        tracing::info!(
+            "Renderer: Configured surface with format: {:?}, alpha_mode: {:?}, present_mode: {:?}",
+            format,
+            alpha_mode,
+            config.present_mode
+        );
 
         surface.configure(&device, &config);
 

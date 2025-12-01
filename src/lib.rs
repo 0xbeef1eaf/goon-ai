@@ -8,4 +8,5 @@ pub mod media;
 pub mod permissions;
 pub mod runtime;
 pub mod sdk;
+pub mod server;
 pub mod typescript;

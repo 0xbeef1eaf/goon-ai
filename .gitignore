@@ -24,3 +24,5 @@ settings.yaml
 # Packs
 /packs/*
 !/packs/TestPack/
+
+web/node_modules/

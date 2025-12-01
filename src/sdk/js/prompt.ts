@@ -22,7 +22,7 @@ class textPrompt {
         const id = await Deno.core.ops.op_show_prompt(options);
         return {
             close: async () => {
-                // TODO
+                await Deno.core.ops.op_close_window(id);
             }
         };
     }

@@ -92,8 +92,13 @@ impl Window {
 
             let content_renderer = self.content_renderer.as_ref();
 
+            if content_renderer.is_some() {
+                tracing::debug!("Window::render: About to call renderer.render with content");
+            }
+
             renderer.render(opacity, |encoder, view, queue| {
                 if let Some(cr) = content_renderer {
+                    tracing::debug!("Window::render: Calling cr.render");
                     cr.render(encoder, view, queue, opacity);
                 } else {
                     // Clear pass

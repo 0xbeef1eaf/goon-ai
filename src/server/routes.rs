@@ -1,20 +1,21 @@
-use axum::{
-    routing::{get, post},
-    Json, Router, extract::{Path, Multipart, State},
-};
+use crate::assets::registry::AssetRegistry;
+use crate::config::pack::{Asset, Mood, PackConfig};
 use crate::config::settings::Settings;
-use crate::config::pack::{PackConfig, Mood, Asset};
+use crate::permissions::{Permission, PermissionChecker, PermissionSet};
 use crate::runtime::GoonRuntime;
 use crate::runtime::runtime::RuntimeContext;
-use crate::assets::registry::AssetRegistry;
-use crate::permissions::{PermissionChecker, PermissionSet, Permission};
 use crate::sdk::system::LogCollector;
 use crate::server::app::AppState;
+use anyhow::Result;
+use axum::{
+    Json, Router,
+    extract::{Multipart, Path, State},
+    routing::{get, post},
+};
+use serde::{Deserialize, Serialize};
 use std::fs;
 use std::io::Write;
 use std::sync::{Arc, Mutex};
-use anyhow::Result;
-use serde::{Deserialize, Serialize};
 
 pub fn api_routes() -> Router<AppState> {
     Router::new()
@@ -168,10 +169,7 @@ struct RunResponse {
     error: Option<String>,
 }
 
-async fn run_code(
-    State(state): State<AppState>,
-    Json(req): Json<RunRequest>,
-) -> Json<RunResponse> {
+async fn run_code(State(state): State<AppState>, Json(req): Json<RunRequest>) -> Json<RunResponse> {
     let logs = Arc::new(Mutex::new(Vec::new()));
     let logs_clone = logs.clone();
     let code = req.code.clone();
@@ -186,7 +184,9 @@ async fn run_code(
             .unwrap();
 
         rt.block_on(async move {
-            let log_collector = LogCollector { logs: logs_clone.clone() };
+            let log_collector = LogCollector {
+                logs: logs_clone.clone(),
+            };
 
             // Setup runtime
             let mut set = PermissionSet::new();
@@ -231,7 +231,9 @@ async fn run_code(
         });
     });
 
-    let result = rx.await.unwrap_or_else(|_| Err(anyhow::anyhow!("Execution panicked")));
+    let result = rx
+        .await
+        .unwrap_or_else(|_| Err(anyhow::anyhow!("Execution panicked")));
 
     let final_logs = logs.lock().unwrap().clone();
     let error = result.err().map(|e| e.to_string());

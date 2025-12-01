@@ -2,6 +2,7 @@ use crate::assets::registry::AssetRegistry;
 use crate::assets::selector::AssetSelector;
 use crate::assets::types::Asset;
 use crate::config::pack::Mood;
+use crate::gui::slint_controller::SlintGuiController;
 use crate::gui::window_manager::GuiInterface;
 use crate::media::image::animation::Animation;
 use crate::media::image::loader::load_image;
@@ -39,7 +40,7 @@ pub async fn op_show_image(
     let (gui_controller, registry, mood) = {
         let mut state = state.borrow_mut();
         check_permission(&mut state, "image")?;
-        let gui = state.borrow::<Arc<dyn GuiInterface>>().clone();
+        let gui = state.borrow::<Arc<SlintGuiController>>().clone();
         let registry = state.borrow::<Arc<AssetRegistry>>().clone();
         let mood = state.borrow::<Mood>().clone();
         (gui, registry, mood)

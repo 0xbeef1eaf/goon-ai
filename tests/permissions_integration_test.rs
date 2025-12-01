@@ -1,28 +1,9 @@
 use anyhow::Result;
-use goon_ai::gui::content::ContentConstructor;
-use goon_ai::gui::window_manager::{GuiInterface, WindowHandle, WindowOptions};
+use goon_ai::gui::slint_controller::SlintGuiController;
 use goon_ai::permissions::{Permission, PermissionChecker, PermissionResolver, PermissionSet};
 use goon_ai::runtime::GoonRuntime;
 use goon_ai::runtime::runtime::RuntimeContext;
 use goon_ai::sdk::generate_definitions_for_permissions;
-
-struct MockGuiController;
-
-impl GuiInterface for MockGuiController {
-    fn create_window(&self, _options: WindowOptions) -> Result<WindowHandle> {
-        Ok(WindowHandle(uuid::Uuid::new_v4()))
-    }
-    fn close_window(&self, _handle: WindowHandle) -> Result<()> {
-        Ok(())
-    }
-    fn set_content(
-        &self,
-        _handle: WindowHandle,
-        _content: Box<dyn ContentConstructor>,
-    ) -> Result<()> {
-        Ok(())
-    }
-}
 
 #[tokio::test]
 async fn test_full_permission_flow() {
@@ -48,13 +29,14 @@ async fn test_full_permission_flow() {
     // 3. Initialize Runtime with Resolved Permissions
     let checker = PermissionChecker::new(active_perms.clone());
 
-    // Mock GuiController
-    let gui_controller = std::sync::Arc::new(MockGuiController);
+    // Use SlintGuiController
+    let gui_controller = std::sync::Arc::new(SlintGuiController::new());
     let registry = std::sync::Arc::new(goon_ai::assets::registry::AssetRegistry::new());
     let mood = goon_ai::config::pack::Mood {
         name: "Test".to_string(),
         description: "".to_string(),
         tags: vec![],
+        prompt: None,
     };
 
     let context = RuntimeContext {

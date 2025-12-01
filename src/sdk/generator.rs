@@ -7,7 +7,7 @@ pub fn generate_definitions(allowed_modules: &[String]) -> String {
 
     definitions.push_str("/** GoonAI SDK */\n");
 
-    for module in all_modules {
+    for module in &all_modules {
         let include = match module.permission {
             None => true, // Always include
             Some(perm) => {
@@ -143,6 +143,34 @@ pub fn generate_definitions(allowed_modules: &[String]) -> String {
             definitions.push('\n');
         }
     }
+
+    // Generate global 'goon' namespace
+    definitions.push_str("\ndeclare const goon: {\n");
+    for module in all_modules {
+        let include = match module.permission {
+            None => true,
+            Some(perm) => {
+                allowed_modules.contains(&perm.to_string())
+                    || allowed_modules.contains(&"all".to_string())
+            }
+        };
+
+        if include {
+            // We assume the class name matches the module name
+            // e.g. module "image" -> class image
+            // But we should check if the template actually exports it.
+            // For now, we assume standard naming convention used in our TS files.
+            // Some modules like "types" don't have a class to export on 'goon'.
+            if module.name == "pack" {
+                definitions.push_str("    pack: typeof Pack;\n");
+            } else if module.name == "system" {
+                definitions.push_str("    system: typeof System;\n");
+            } else if module.name != "types" {
+                definitions.push_str(&format!("    {}: typeof {};\n", module.name, module.name));
+            }
+        }
+    }
+    definitions.push_str("};\n");
 
     definitions
 }

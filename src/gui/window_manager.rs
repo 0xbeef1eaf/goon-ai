@@ -2,6 +2,7 @@ use super::event_loop::GuiCommand;
 use anyhow::Result;
 use std::collections::HashMap;
 use std::sync::mpsc::channel;
+use tracing::{debug, error, info};
 use uuid::Uuid;
 use winit::event_loop::{ActiveEventLoop, EventLoopProxy};
 use winit::window::WindowId;
@@ -70,6 +71,10 @@ pub struct GuiController {
 
 impl GuiInterface for GuiController {
     fn create_window(&self, options: WindowOptions) -> Result<WindowHandle> {
+        debug!(
+            "GuiController: Requesting create_window with options: {:?}",
+            options
+        );
         let (tx, rx) = channel();
         self.proxy
             .send_event(GuiCommand::CreateWindow(options, tx))
@@ -79,6 +84,10 @@ impl GuiInterface for GuiController {
     }
 
     fn close_window(&self, handle: WindowHandle) -> Result<()> {
+        debug!(
+            "GuiController: Requesting close_window for handle: {:?}",
+            handle
+        );
         self.proxy
             .send_event(GuiCommand::CloseWindow(handle))
             .map_err(|_| anyhow::anyhow!("Event loop closed"))?;
@@ -90,6 +99,10 @@ impl GuiInterface for GuiController {
         handle: WindowHandle,
         content: Box<dyn ContentConstructor>,
     ) -> Result<()> {
+        debug!(
+            "GuiController: Requesting set_content for handle: {:?}",
+            handle
+        );
         self.proxy
             .send_event(GuiCommand::SetContent(handle, content))
             .map_err(|_| anyhow::anyhow!("Event loop closed"))?;
@@ -133,6 +146,7 @@ impl WindowManager {
         options: WindowOptions,
         event_loop: &ActiveEventLoop,
     ) -> Result<WindowHandle> {
+        info!("WindowManager: Creating window with options: {:?}", options);
         let id = Uuid::new_v4();
         let handle = WindowHandle(id);
 
@@ -140,18 +154,37 @@ impl WindowManager {
             self.deadlines.push((Instant::now() + timeout, handle));
         }
 
-        let window = Window::new(options, event_loop)?;
+        let window = match Window::new(options, event_loop) {
+            Ok(w) => w,
+            Err(e) => {
+                error!("WindowManager: Failed to create window: {}", e);
+                return Err(e);
+            }
+        };
         let window_id = window.winit_window.id();
 
         self.windows.insert(handle, window);
         self.winit_to_handle.insert(window_id, handle);
 
+        // Request initial redraw
+        if let Some(window) = self.windows.get(&handle) {
+            window.winit_window.request_redraw();
+        }
+
+        info!(
+            "WindowManager: Window created successfully. Handle: {:?}, Winit ID: {:?}",
+            handle, window_id
+        );
+
         Ok(handle)
     }
 
     pub fn close_window(&mut self, handle: WindowHandle) {
+        info!("WindowManager: Closing window with handle: {:?}", handle);
         if let Some(window) = self.windows.remove(&handle) {
             self.winit_to_handle.remove(&window.winit_window.id());
+        } else {
+            debug!("WindowManager: Window not found for handle: {:?}", handle);
         }
         // Remove from deadlines
         self.deadlines.retain(|(_, h)| *h != handle);

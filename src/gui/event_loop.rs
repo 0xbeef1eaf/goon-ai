@@ -3,6 +3,7 @@ use super::window_manager::{WindowHandle, WindowManager, WindowMessage, WindowOp
 use anyhow::Result;
 use std::sync::mpsc::Sender;
 use std::sync::{Arc, Mutex};
+use tracing::{debug, error};
 use winit::application::ApplicationHandler;
 use winit::event::WindowEvent;
 use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop, EventLoopProxy};
@@ -14,38 +15,58 @@ pub enum GuiCommand {
     SetContent(WindowHandle, Box<dyn ContentConstructor>),
 }
 
-pub struct App {
+pub struct AppHandler {
     window_manager: Arc<Mutex<WindowManager>>,
 }
 
-impl App {
+impl AppHandler {
     pub fn new(window_manager: Arc<Mutex<WindowManager>>) -> Self {
         Self { window_manager }
     }
 }
 
-impl ApplicationHandler<GuiCommand> for App {
+impl ApplicationHandler<GuiCommand> for AppHandler {
     fn resumed(&mut self, _event_loop: &ActiveEventLoop) {
-        // Resumed
+        debug!("EventLoop: Resumed");
     }
 
     fn user_event(&mut self, event_loop: &ActiveEventLoop, event: GuiCommand) {
         match event {
             GuiCommand::CreateWindow(options, reply_sender) => {
+                debug!("EventLoop: Received CreateWindow command");
                 let mut wm = self.window_manager.lock().unwrap();
                 let result = wm.create_window(options, event_loop);
+                if let Err(e) = &result {
+                    error!("EventLoop: Failed to create window: {}", e);
+                }
                 let _ = reply_sender.send(result);
             }
             GuiCommand::CloseWindow(handle) => {
+                debug!(
+                    "EventLoop: Received CloseWindow command for handle: {:?}",
+                    handle
+                );
                 let mut wm = self.window_manager.lock().unwrap();
                 wm.close_window(handle);
             }
             GuiCommand::SetContent(handle, content) => {
+                debug!(
+                    "EventLoop: Received SetContent command for handle: {:?}",
+                    handle
+                );
                 let mut wm = self.window_manager.lock().unwrap();
-                if let Some(window) = wm.get_window_mut(handle)
-                    && let Err(e) = window.set_content(content)
-                {
-                    eprintln!("Failed to set content: {}", e);
+                if let Some(window) = wm.get_window_mut(handle) {
+                    if let Err(e) = window.set_content(content) {
+                        error!("EventLoop: Failed to set content: {}", e);
+                    } else {
+                        debug!(
+                            "EventLoop: Content set successfully for handle: {:?}",
+                            handle
+                        );
+                        window.winit_window.request_redraw();
+                    }
+                } else {
+                    error!("EventLoop: Window not found for SetContent: {:?}", handle);
                 }
             }
         }
@@ -98,8 +119,11 @@ impl ApplicationHandler<GuiCommand> for App {
                         Err(wgpu::SurfaceError::Lost) => {
                             window.resize(window.winit_window.inner_size());
                         }
-                        Err(wgpu::SurfaceError::OutOfMemory) => event_loop.exit(),
-                        Err(e) => eprintln!("{:?}", e),
+                        Err(wgpu::SurfaceError::OutOfMemory) => {
+                            error!("EventLoop: OutOfMemory, exiting");
+                            event_loop.exit()
+                        }
+                        Err(e) => error!("EventLoop: Render error: {:?}", e),
                     }
                 }
             }
@@ -107,7 +131,9 @@ impl ApplicationHandler<GuiCommand> for App {
                 let mut wm = self.window_manager.lock().unwrap();
                 if let Some(handle) = wm.get_handle_from_winit(window_id) {
                     let should_close = if let Some(window) = wm.get_window_mut(handle) {
-                        window.handle_input(&event)
+                        let close = window.handle_input(&event);
+                        window.winit_window.request_redraw();
+                        close
                     } else {
                         false
                     };
@@ -134,6 +160,9 @@ impl ApplicationHandler<GuiCommand> for App {
             _ => (),
         }
     }
+    fn exiting(&mut self, _event_loop: &ActiveEventLoop) {
+        debug!("EventLoop: Exiting");
+    }
 }
 
 pub fn create_event_loop() -> Result<(EventLoop<GuiCommand>, EventLoopProxy<GuiCommand>)> {
@@ -147,7 +176,7 @@ pub fn run_event_loop(
     window_manager: Arc<Mutex<WindowManager>>,
 ) -> Result<()> {
     event_loop.set_control_flow(ControlFlow::Wait);
-    let mut app = App::new(window_manager);
+    let mut app = AppHandler::new(window_manager);
     event_loop.run_app(&mut app)?;
     Ok(())
 }

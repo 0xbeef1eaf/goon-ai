@@ -96,6 +96,12 @@ impl Settings {
             serde_yaml::from_str(content).context("Failed to parse settings")?;
         Ok(settings)
     }
+
+    pub fn save(&self) -> Result<()> {
+        let content = serde_yaml::to_string(self).context("Failed to serialize settings")?;
+        fs::write("settings.yaml", content).context("Failed to write settings.yaml")?;
+        Ok(())
+    }
 }
 
 #[cfg(test)]
