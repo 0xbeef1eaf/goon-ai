@@ -1,11 +1,25 @@
+use crate::gui::window_manager::{GuiInterface, WindowHandle};
 use crate::runtime::error::OpError;
 use deno_core::OpState;
 use deno_core::op2;
 use std::cell::RefCell;
 use std::rc::Rc;
+use uuid::Uuid;
+
+use std::sync::{Arc, Mutex};
+
+#[derive(Clone, Default)]
+pub struct LogCollector {
+    pub logs: Arc<Mutex<Vec<String>>>,
+}
 
 #[op2(fast)]
-pub fn op_log(#[string] msg: String) {
+pub fn op_log(state: &mut OpState, #[string] msg: String) {
+    if let Some(collector) = state.try_borrow::<LogCollector>()
+        && let Ok(mut logs) = collector.logs.lock()
+    {
+        logs.push(msg.clone());
+    }
     println!("[JS Log]: {}", msg);
 }
 
@@ -21,8 +35,16 @@ pub async fn op_get_asset(
 }
 
 #[op2(async)]
-pub async fn op_close_window(_state: Rc<RefCell<OpState>>, handle: u32) -> Result<(), OpError> {
-    println!("Closing window: {}", handle);
+pub async fn op_close_window(state: Rc<RefCell<OpState>>, #[string] handle: String) -> Result<(), OpError> {
+    let gui_controller = {
+        let state = state.borrow();
+        state.borrow::<Arc<dyn GuiInterface>>().clone()
+    };
+
+    let uuid = Uuid::parse_str(&handle).map_err(|e| OpError::new(&e.to_string()))?;
+    gui_controller
+        .close_window(WindowHandle(uuid))
+        .map_err(|e| OpError::new(&e.to_string()))?;
     Ok(())
 }
 
