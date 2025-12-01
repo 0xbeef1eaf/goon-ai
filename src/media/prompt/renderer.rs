@@ -28,6 +28,8 @@ pub struct PromptRenderer {
     #[allow(dead_code)]
     alignment: glyphon::cosmic_text::Align,
     is_prepared: bool,
+    last_cursor_toggle: std::time::Instant,
+    show_cursor: bool,
 }
 
 impl PromptRenderer {
@@ -105,6 +107,8 @@ impl PromptRenderer {
             background_color,
             alignment,
             is_prepared: false,
+            last_cursor_toggle: std::time::Instant::now(),
+            show_cursor: true,
         })
     }
 }
@@ -127,6 +131,10 @@ impl Renderable for PromptRenderer {
 
     fn handle_input(&mut self, event: &KeyEvent) -> bool {
         if event.state == ElementState::Pressed {
+            // Reset cursor blink on any input
+            self.last_cursor_toggle = std::time::Instant::now();
+            self.show_cursor = true;
+
             match &event.logical_key {
                 Key::Character(c) => {
                     if !c.chars().any(|x| x.is_control()) {
@@ -173,11 +181,26 @@ impl Renderable for PromptRenderer {
             return None;
         }
 
-        // Update buffer text with prompt + user input
+        // Update cursor blink state (blink every 500ms)
+        let elapsed = self.last_cursor_toggle.elapsed().as_millis();
+        if elapsed > 500 {
+            self.show_cursor = !self.show_cursor;
+            self.last_cursor_toggle = std::time::Instant::now();
+        }
+
+        // Build the display text with visual input box
+        let cursor_char = if self.show_cursor { "│" } else { " " };
+
         let display_text = if self.user_input.is_empty() {
-            format!("{}\n\nStart typing...", self.text)
+            format!(
+                "{}\n\n┌─────────────────────────────────┐\n│ {} \n└─────────────────────────────────┘\n\nType the text above and press Enter",
+                self.text, cursor_char
+            )
         } else {
-            format!("{}\n\n> {}", self.text, self.user_input)
+            format!(
+                "{}\n\n┌─────────────────────────────────┐\n│ {}{} \n└─────────────────────────────────┘",
+                self.text, self.user_input, cursor_char
+            )
         };
 
         self.buffer.set_text(
