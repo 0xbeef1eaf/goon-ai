@@ -1830,7 +1830,7 @@ dependencies = [
  "uuid",
  "walkdir",
  "wgpu",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
  "winit",
  "x11rb",
  "zip",
