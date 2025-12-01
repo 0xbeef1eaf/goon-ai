@@ -25,7 +25,7 @@ pub struct RuntimeContext {
 }
 
 pub struct GoonRuntime {
-    js_runtime: JsRuntime,
+    pub js_runtime: JsRuntime,
     _audio_stream: Option<OutputStream>,
 }
 
@@ -163,6 +163,7 @@ mod tests {
             name: "Test".to_string(),
             description: "".to_string(),
             tags: vec![],
+            prompt: None,
         };
         let context = RuntimeContext {
             permissions,
@@ -196,6 +197,7 @@ mod tests {
             name: "Test".to_string(),
             description: "".to_string(),
             tags: vec![],
+            prompt: None,
         };
         let context = RuntimeContext {
             permissions,
@@ -237,6 +239,7 @@ mod tests {
             name: "Test".to_string(),
             description: "".to_string(),
             tags: vec![],
+            prompt: None,
         };
         let context = RuntimeContext {
             permissions,
@@ -270,6 +273,7 @@ mod tests {
             name: "TestMood".to_string(),
             description: "A test mood".to_string(),
             tags: vec!["tag1".to_string()],
+            prompt: None,
         };
         let context = RuntimeContext {
             permissions,
