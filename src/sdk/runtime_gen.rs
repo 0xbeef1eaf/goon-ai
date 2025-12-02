@@ -8,6 +8,15 @@
 use crate::sdk::analysis::{self, OpInfo};
 use std::path::Path;
 
+/// Configuration for a method on a Handle class
+#[derive(Clone, Default)]
+pub struct HandleMethodConfig {
+    /// The method name (e.g., "close", "stop", "pause")
+    pub method_name: &'static str,
+    /// The op to call (e.g., "op_close_window", "op_stop_audio")
+    pub op_name: &'static str,
+}
+
 /// Configuration for generating a module's runtime code
 #[derive(Default)]
 pub struct ModuleConfig {
@@ -19,10 +28,8 @@ pub struct ModuleConfig {
     pub has_handle: bool,
     /// The handle class name if has_handle is true (e.g., "ImageHandle", "VideoHandle")
     pub handle_class_name: Option<&'static str>,
-    /// Custom handle class code (overrides default generation)
-    pub custom_handle_code: Option<&'static str>,
-    /// Custom primary method body (for special return handling)
-    pub custom_primary_body: Option<&'static str>,
+    /// Methods on the handle class (e.g., close, stop, pause, resume)
+    pub handle_methods: Vec<HandleMethodConfig>,
     /// The primary op name (e.g., "op_show_image", "op_play_audio")
     pub primary_op: &'static str,
     /// The primary method name in TypeScript (e.g., "show", "play")
@@ -75,24 +82,30 @@ fn op_name_to_ts_method(op_name: &str) -> String {
 }
 
 /// Generate a Handle class that wraps a window/media handle ID
-fn generate_handle_class(handle_name: &str, close_op: &str) -> String {
-    format!(
+fn generate_handle_class(handle_name: &str, methods: &[HandleMethodConfig]) -> String {
+    let mut output = format!(
         r#"class {handle_name} {{
     constructor(id) {{
         this.id = id;
     }}
-
-    /**
-     * Closes this handle and releases associated resources.
-     */
-    async close() {{
-        await Deno.core.ops.{close_op}(this.id);
-    }}
-}}
 "#,
-        handle_name = handle_name,
-        close_op = close_op
-    )
+        handle_name = handle_name
+    );
+
+    for method in methods {
+        output.push_str(&format!(
+            r#"
+    async {method_name}() {{
+        await Deno.core.ops.{op_name}(this.id);
+    }}
+"#,
+            method_name = method.method_name,
+            op_name = method.op_name
+        ));
+    }
+
+    output.push_str("}\n");
+    output
 }
 
 /// Generate JSDoc comment from op documentation
@@ -228,14 +241,9 @@ pub fn generate_module_runtime(config: &ModuleConfig) -> String {
     };
 
     // Generate handle class if needed
-    if config.has_handle {
-        if let Some(custom_code) = config.custom_handle_code {
-            output.push_str(custom_code);
-            output.push('\n');
-        } else if let Some(handle_name) = config.handle_class_name {
-            output.push_str(&generate_handle_class(handle_name, "op_close_window"));
-            output.push('\n');
-        }
+    if let Some(handle_name) = config.handle_class_name.filter(|_| config.has_handle) {
+        output.push_str(&generate_handle_class(handle_name, &config.handle_methods));
+        output.push('\n');
     }
 
     // Generate main class
@@ -244,38 +252,28 @@ pub fn generate_module_runtime(config: &ModuleConfig) -> String {
     // Generate primary method if specified
     if !config.primary_op.is_empty() {
         let primary_docs = find_op_docs(&ops, config.primary_op);
-        if let Some(custom_body) = config.custom_primary_body {
-            // Use custom body for primary method
-            let jsdoc = generate_jsdoc(&primary_docs, "    ");
-            let params = config.options_type.map(|_| "options").unwrap_or("");
-            output.push_str(&format!(
-                "{}    static async {}({}) {{\n        {}\n    }}\n",
-                jsdoc, config.primary_method, params, custom_body
-            ));
+        let param = config.options_type.map(|_| "options");
+        let primary_method = if config.primary_returns_value {
+            // Primary method returns a value (not void, not handle)
+            generate_returning_method(
+                config.primary_method,
+                config.primary_op,
+                param,
+                &primary_docs,
+                false,
+            )
         } else {
-            let param = config.options_type.map(|_| "options");
-            let primary_method = if config.primary_returns_value {
-                // Primary method returns a value (not void, not handle)
-                generate_returning_method(
-                    config.primary_method,
-                    config.primary_op,
-                    param,
-                    &primary_docs,
-                    false,
-                )
-            } else {
-                // Primary method may return a handle or void
-                generate_method(
-                    config.primary_method,
-                    config.primary_op,
-                    param,
-                    config.handle_class_name,
-                    &primary_docs,
-                    false,
-                )
-            };
-            output.push_str(&primary_method);
-        }
+            // Primary method may return a handle or void
+            generate_method(
+                config.primary_method,
+                config.primary_op,
+                param,
+                config.handle_class_name,
+                &primary_docs,
+                false,
+            )
+        };
+        output.push_str(&primary_method);
     }
 
     // Generate extra methods
@@ -312,8 +310,10 @@ pub fn generate_image_runtime() -> String {
         class_name: "image",
         has_handle: true,
         handle_class_name: Some("ImageHandle"),
-        custom_handle_code: None,
-        custom_primary_body: None,
+        handle_methods: vec![HandleMethodConfig {
+            method_name: "close",
+            op_name: "op_close_window",
+        }],
         primary_op: "op_show_image",
         primary_method: "show",
         primary_returns_value: false,
@@ -330,8 +330,10 @@ pub fn generate_video_runtime() -> String {
         class_name: "video",
         has_handle: true,
         handle_class_name: Some("VideoHandle"),
-        custom_handle_code: None,
-        custom_primary_body: None,
+        handle_methods: vec![HandleMethodConfig {
+            method_name: "close",
+            op_name: "op_close_window",
+        }],
         primary_op: "op_show_video",
         primary_method: "play",
         primary_returns_value: false,
@@ -348,28 +350,20 @@ pub fn generate_audio_runtime() -> String {
         class_name: "audio",
         has_handle: true,
         handle_class_name: Some("AudioHandle"),
-        custom_handle_code: Some(
-            r#"class AudioHandle {
-    constructor(handle) {
-        this.id = handle.id;
-    }
-
-    async stop() {
-        await Deno.core.ops.op_stop_audio(this.id);
-    }
-
-    async pause() {
-        await Deno.core.ops.op_pause_audio(this.id);
-    }
-
-    async resume() {
-        await Deno.core.ops.op_resume_audio(this.id);
-    }
-}"#,
-        ),
-        custom_primary_body: Some(
-            "const handle = await Deno.core.ops.op_play_audio(options);\n        return new AudioHandle(handle);",
-        ),
+        handle_methods: vec![
+            HandleMethodConfig {
+                method_name: "stop",
+                op_name: "op_stop_audio",
+            },
+            HandleMethodConfig {
+                method_name: "pause",
+                op_name: "op_pause_audio",
+            },
+            HandleMethodConfig {
+                method_name: "resume",
+                op_name: "op_resume_audio",
+            },
+        ],
         primary_op: "op_play_audio",
         primary_method: "play",
         primary_returns_value: false,
@@ -386,8 +380,7 @@ pub fn generate_system_runtime() -> String {
         class_name: "system",
         has_handle: false,
         handle_class_name: None,
-        custom_handle_code: None,
-        custom_primary_body: None,
+        handle_methods: vec![],
         primary_op: "",
         primary_method: "",
         primary_returns_value: false,
@@ -426,8 +419,7 @@ pub fn generate_pack_runtime() -> String {
         class_name: "pack",
         has_handle: false,
         handle_class_name: None,
-        custom_handle_code: None,
-        custom_primary_body: None,
+        handle_methods: vec![],
         primary_op: "op_get_current_mood",
         primary_method: "getCurrentMood",
         primary_returns_value: true,
@@ -450,8 +442,10 @@ pub fn generate_prompt_runtime() -> String {
         class_name: "textPrompt",
         has_handle: true,
         handle_class_name: Some("PromptHandle"),
-        custom_handle_code: None,
-        custom_primary_body: None,
+        handle_methods: vec![HandleMethodConfig {
+            method_name: "close",
+            op_name: "op_close_window",
+        }],
         primary_op: "op_show_prompt",
         primary_method: "show",
         primary_returns_value: false,
@@ -468,8 +462,7 @@ pub fn generate_wallpaper_runtime() -> String {
         class_name: "wallpaper",
         has_handle: false,
         handle_class_name: None,
-        custom_handle_code: None,
-        custom_primary_body: None,
+        handle_methods: vec![],
         primary_op: "op_set_wallpaper",
         primary_method: "set",
         primary_returns_value: false,
@@ -486,8 +479,7 @@ pub fn generate_website_runtime() -> String {
         class_name: "website",
         has_handle: false,
         handle_class_name: None,
-        custom_handle_code: None,
-        custom_primary_body: None,
+        handle_methods: vec![],
         primary_op: "op_open_website",
         primary_method: "open",
         primary_returns_value: false,
@@ -504,8 +496,7 @@ pub fn generate_hypno_runtime() -> String {
         class_name: "hypno",
         has_handle: false,
         handle_class_name: None,
-        custom_handle_code: None,
-        custom_primary_body: None,
+        handle_methods: vec![],
         primary_op: "op_show_hypno",
         primary_method: "show",
         primary_returns_value: false,
@@ -539,7 +530,11 @@ mod tests {
 
     #[test]
     fn test_generate_handle_class() {
-        let output = generate_handle_class("ImageHandle", "op_close_window");
+        let methods = vec![HandleMethodConfig {
+            method_name: "close",
+            op_name: "op_close_window",
+        }];
+        let output = generate_handle_class("ImageHandle", &methods);
         assert!(output.contains("class ImageHandle"));
         assert!(output.contains("this.id = id"));
         assert!(output.contains("async close()"));

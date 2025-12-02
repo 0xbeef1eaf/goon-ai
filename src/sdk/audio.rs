@@ -13,6 +13,13 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 use ts_rs::TS;
+use uuid::Uuid;
+
+/// Parse a string handle ID into an AudioHandle
+fn parse_audio_handle(handle_id: &str) -> Result<AudioHandle, OpError> {
+    let uuid = Uuid::parse_str(handle_id).map_err(|_| OpError::new("Invalid audio handle ID"))?;
+    Ok(AudioHandle(uuid))
+}
 
 #[derive(Deserialize, Debug, Default, TS)]
 #[ts(export)]
@@ -25,11 +32,11 @@ pub struct AudioOptions {
 }
 
 #[op2(async)]
-#[serde]
+#[string]
 pub async fn op_play_audio(
     state: Rc<RefCell<OpState>>,
     #[serde] options: Option<serde_json::Value>,
-) -> Result<AudioHandle, OpError> {
+) -> Result<String, OpError> {
     let (registry, mood, audio_manager) = {
         let mut state = state.borrow_mut();
         check_permission(&mut state, "audio")?;
@@ -72,14 +79,15 @@ pub async fn op_play_audio(
             .map_err(|e| OpError::new(&e.to_string()))?
     };
 
-    Ok(handle)
+    Ok(handle.0.to_string())
 }
 
 #[op2(async)]
 pub async fn op_stop_audio(
     state: Rc<RefCell<OpState>>,
-    #[serde] handle: AudioHandle,
+    #[string] handle_id: String,
 ) -> Result<(), OpError> {
+    let handle = parse_audio_handle(&handle_id)?;
     let audio_manager = {
         let mut state = state.borrow_mut();
         check_permission(&mut state, "audio")?;
@@ -98,8 +106,9 @@ pub async fn op_stop_audio(
 #[op2(async)]
 pub async fn op_pause_audio(
     state: Rc<RefCell<OpState>>,
-    #[serde] handle: AudioHandle,
+    #[string] handle_id: String,
 ) -> Result<(), OpError> {
+    let handle = parse_audio_handle(&handle_id)?;
     let audio_manager = {
         let mut state = state.borrow_mut();
         check_permission(&mut state, "audio")?;
@@ -118,8 +127,9 @@ pub async fn op_pause_audio(
 #[op2(async)]
 pub async fn op_resume_audio(
     state: Rc<RefCell<OpState>>,
-    #[serde] handle: AudioHandle,
+    #[string] handle_id: String,
 ) -> Result<(), OpError> {
+    let handle = parse_audio_handle(&handle_id)?;
     let audio_manager = {
         let mut state = state.borrow_mut();
         check_permission(&mut state, "audio")?;
@@ -138,9 +148,10 @@ pub async fn op_resume_audio(
 #[op2(async)]
 pub async fn op_set_audio_volume(
     state: Rc<RefCell<OpState>>,
-    #[serde] handle: AudioHandle,
+    #[string] handle_id: String,
     volume: f32,
 ) -> Result<(), OpError> {
+    let handle = parse_audio_handle(&handle_id)?;
     let audio_manager = {
         let mut state = state.borrow_mut();
         check_permission(&mut state, "audio")?;
