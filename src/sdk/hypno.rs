@@ -59,6 +59,4 @@ pub async fn op_show_hypno(
     Ok(3)
 }
 
-pub const TS_SOURCE: &str = include_str!("js/hypno.ts");
-
 deno_core::extension!(goon_hypno, ops = [op_show_hypno],);

@@ -78,6 +78,4 @@ pub async fn op_show_video(
     Ok(handle.0.to_string())
 }
 
-pub const TS_SOURCE: &str = include_str!("js/video.ts");
-
 deno_core::extension!(goon_video, ops = [op_show_video],);

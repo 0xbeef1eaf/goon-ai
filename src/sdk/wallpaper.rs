@@ -77,10 +77,4 @@ pub async fn op_set_wallpaper(
     Ok(())
 }
 
-pub const TS_SOURCE: &str = include_str!("js/wallpaper.ts");
-
-pub fn get_source() -> String {
-    TS_SOURCE.to_string()
-}
-
 deno_core::extension!(goon_wallpaper, ops = [op_set_wallpaper],);

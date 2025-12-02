@@ -15,23 +15,22 @@ pub mod website;
 pub mod analysis;
 pub mod generator;
 pub mod metadata;
+pub mod runtime_gen;
 pub mod templates;
 pub mod types;
 
-pub const INIT_SOURCE: &str = include_str!("js/init.ts");
-
 pub fn get_all_typescript_sources() -> Vec<String> {
     vec![
-        INIT_SOURCE.to_string(),
-        image::TS_SOURCE.to_string(),
-        pack::TS_SOURCE.to_string(),
-        video::TS_SOURCE.to_string(),
-        audio::TS_SOURCE.to_string(),
-        hypno::TS_SOURCE.to_string(),
-        wallpaper::get_source(),
-        prompt::TS_SOURCE.to_string(),
-        website::get_source(),
-        system::TS_SOURCE.to_string(),
+        runtime_gen::generate_init_runtime(),
+        runtime_gen::generate_image_runtime(),
+        runtime_gen::generate_pack_runtime(),
+        runtime_gen::generate_video_runtime(),
+        runtime_gen::generate_audio_runtime(),
+        runtime_gen::generate_hypno_runtime(),
+        runtime_gen::generate_wallpaper_runtime(),
+        runtime_gen::generate_prompt_runtime(),
+        runtime_gen::generate_website_runtime(),
+        runtime_gen::generate_system_runtime(),
     ]
 }
 

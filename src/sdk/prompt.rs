@@ -74,6 +74,4 @@ pub async fn op_show_prompt(
     Ok(handle.0.to_string())
 }
 
-pub const TS_SOURCE: &str = include_str!("js/prompt.ts");
-
 deno_core::extension!(goon_prompt, ops = [op_show_prompt],);

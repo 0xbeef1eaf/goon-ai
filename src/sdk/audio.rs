@@ -156,8 +156,6 @@ pub async fn op_set_audio_volume(
     Ok(())
 }
 
-pub const TS_SOURCE: &str = include_str!("js/audio.ts");
-
 deno_core::extension!(
     goon_audio,
     ops = [

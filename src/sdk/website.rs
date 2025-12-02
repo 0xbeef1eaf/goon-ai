@@ -57,10 +57,4 @@ pub async fn op_open_website(
     Ok(())
 }
 
-pub const TS_SOURCE: &str = include_str!("js/website.ts");
-
-pub fn get_source() -> String {
-    TS_SOURCE.to_string()
-}
-
 deno_core::extension!(goon_website, ops = [op_open_website],);

@@ -51,6 +51,4 @@ pub async fn op_close_window(
     Ok(())
 }
 
-pub const TS_SOURCE: &str = include_str!("js/system.ts");
-
 deno_core::extension!(goon_system, ops = [op_log, op_get_asset, op_close_window,],);

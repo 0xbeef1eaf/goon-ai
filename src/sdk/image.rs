@@ -77,6 +77,4 @@ pub async fn op_show_image(
     Ok(handle.0.to_string())
 }
 
-pub const TS_SOURCE: &str = include_str!("js/image.ts");
-
 deno_core::extension!(goon_image, ops = [op_show_image],);

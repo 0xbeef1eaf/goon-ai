@@ -48,6 +48,4 @@ pub fn op_set_current_mood(
     Ok(())
 }
 
-pub const TS_SOURCE: &str = include_str!("js/pack.ts");
-
 deno_core::extension!(goon_pack, ops = [op_get_current_mood, op_set_current_mood],);
