@@ -1,6 +1,35 @@
 use crate::sdk::{analysis, metadata};
 use std::path::Path;
 
+/// Convert a Rust op function name to a TypeScript method name.
+/// e.g., "op_show_image" -> "show"
+/// e.g., "op_play_audio" -> "play"
+/// e.g., "op_set_mood" -> "setMood"
+fn op_name_to_ts_method(op_name: &str) -> String {
+    // Remove "op_" prefix
+    let name = op_name.strip_prefix("op_").unwrap_or(op_name);
+
+    // Split by underscores and convert to camelCase
+    let parts: Vec<&str> = name.split('_').collect();
+    if parts.is_empty() {
+        return name.to_string();
+    }
+
+    // First part stays lowercase, rest get capitalized first letter
+    let mut result = parts[0].to_string();
+    for part in &parts[1..] {
+        if !part.is_empty() {
+            let mut chars = part.chars();
+            if let Some(first) = chars.next() {
+                result.push_str(&first.to_uppercase().to_string());
+                result.push_str(chars.as_str());
+            }
+        }
+    }
+
+    result
+}
+
 pub fn generate_definitions(allowed_modules: &[String]) -> String {
     let all_modules = metadata::get_modules();
     let mut definitions = String::new();
@@ -23,10 +52,37 @@ pub fn generate_definitions(allowed_modules: &[String]) -> String {
 
             if Path::new(&source_path).exists() {
                 let (ops, structs) = analysis::analyze_source(Path::new(&source_path));
-                for _op in ops {
-                    // This is where we could auto-generate the function signature
-                    // For now, we rely on the template, but we could verify or append here
-                    // definitions.push_str(&format!("// Found op: {}\n", op.name));
+
+                // Auto-generate function signatures from ops
+                for op in &ops {
+                    let ts_method_name = op_name_to_ts_method(&op.name);
+
+                    // Generate doc comment if docs exist
+                    if !op.docs.is_empty() {
+                        let doc_block = op
+                            .docs
+                            .iter()
+                            .map(|d| format!("   * {}", d))
+                            .collect::<Vec<_>>()
+                            .join("\n");
+
+                        // Find the method in the template and inject docs before it
+                        let method_patterns = [
+                            format!("{}(", ts_method_name),
+                            format!("{} (", ts_method_name),
+                        ];
+
+                        for pattern in method_patterns {
+                            if let Some(idx) = template.find(&pattern) {
+                                // Find the start of the line (after previous newline)
+                                let line_start =
+                                    template[..idx].rfind('\n').map(|i| i + 1).unwrap_or(0);
+                                let doc_comment = format!("  /**\n{}   */\n  ", doc_block);
+                                template.insert_str(line_start, &doc_comment);
+                                break;
+                            }
+                        }
+                    }
                 }
 
                 // Inject struct and field documentation
@@ -178,6 +234,15 @@ pub fn generate_definitions(allowed_modules: &[String]) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_op_name_to_ts_method() {
+        assert_eq!(op_name_to_ts_method("op_show_image"), "showImage");
+        assert_eq!(op_name_to_ts_method("op_play_audio"), "playAudio");
+        assert_eq!(op_name_to_ts_method("op_set_mood"), "setMood");
+        assert_eq!(op_name_to_ts_method("op_show"), "show");
+        assert_eq!(op_name_to_ts_method("show_image"), "showImage");
+    }
 
     #[test]
     fn test_generate_definitions_includes_always_modules() {
