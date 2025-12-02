@@ -13,4 +13,8 @@ tags: Array<string> | null,
 /**
  * Duration to display the image in seconds
  */
-duration: bigint | null, opacity: number | null, position: Position | null, size: Size | null, alwaysOnTop: boolean | null, clickThrough: boolean | null, decorations: boolean | null, };
+duration: bigint | null,
+/**
+ * Window opacity (0.0 to 1.0)
+ */
+opacity: number | null, opacity: number | null, position: Position | null, size: Size | null, alwaysOnTop: boolean | null, clickThrough: boolean | null, decorations: boolean | null, };

@@ -8,6 +8,7 @@ use i_slint_backend_winit::WinitWindowAccessor;
 use slint::ComponentHandle;
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::path::PathBuf;
 use std::rc::Rc;
 use std::sync::mpsc::{Receiver, Sender, channel};
 use tracing::{debug, error, info};
@@ -32,6 +33,14 @@ pub enum WindowCommand {
         background_color: [f32; 4],
         alignment: String,
     },
+    /// Spawn a new image window
+    SpawnImage {
+        handle: WindowHandle,
+        path: PathBuf,
+        width: Option<u32>,
+        height: Option<u32>,
+        opacity: f32,
+    },
     /// Close a specific window
     CloseWindow(WindowHandle),
     /// Close all windows
@@ -51,9 +60,24 @@ pub enum WindowResponse {
     Error(String),
 }
 
+/// Enum to hold different window types
+enum WindowType {
+    Prompt(Rc<PromptWindow>),
+    Image(Rc<ImageWindow>),
+}
+
+impl WindowType {
+    fn hide(&self) -> Result<(), slint::PlatformError> {
+        match self {
+            WindowType::Prompt(w) => w.hide(),
+            WindowType::Image(w) => w.hide(),
+        }
+    }
+}
+
 // Thread-local storage for active windows
 thread_local! {
-    static WINDOWS: RefCell<HashMap<WindowHandle, Rc<PromptWindow>>> = RefCell::new(HashMap::new());
+    static WINDOWS: RefCell<HashMap<WindowHandle, WindowType>> = RefCell::new(HashMap::new());
 }
 
 /// Window spawner that processes commands on the Slint UI thread
@@ -99,6 +123,20 @@ impl WindowSpawner {
                         &alignment,
                     ) {
                         error!("Failed to spawn prompt window: {}", e);
+                        let _ = self.response_tx.send(WindowResponse::Error(e.to_string()));
+                    } else {
+                        let _ = self.response_tx.send(WindowResponse::Spawned(handle));
+                    }
+                }
+                WindowCommand::SpawnImage {
+                    handle,
+                    path,
+                    width,
+                    height,
+                    opacity,
+                } => {
+                    if let Err(e) = self.spawn_image_window(handle, &path, width, height, opacity) {
+                        error!("Failed to spawn image window: {}", e);
                         let _ = self.response_tx.send(WindowResponse::Error(e.to_string()));
                     } else {
                         let _ = self.response_tx.send(WindowResponse::Spawned(handle));
@@ -163,7 +201,9 @@ impl WindowSpawner {
 
         // Store window
         WINDOWS.with(|windows| {
-            windows.borrow_mut().insert(handle, window.clone());
+            windows
+                .borrow_mut()
+                .insert(handle, WindowType::Prompt(window.clone()));
         });
 
         // Show window
@@ -190,6 +230,72 @@ impl WindowSpawner {
         window.invoke_grab_focus();
 
         debug!("Spawned prompt window: {:?}", handle);
+        Ok(())
+    }
+
+    /// Spawn a new image window
+    fn spawn_image_window(
+        &self,
+        handle: WindowHandle,
+        path: &std::path::Path,
+        width: Option<u32>,
+        height: Option<u32>,
+        opacity: f32,
+    ) -> Result<()> {
+        // Load the image
+        let image_data = image::open(path)
+            .map_err(|e| anyhow::anyhow!("Failed to load image: {}", e))?
+            .into_rgba8();
+
+        let img_width = image_data.width();
+        let img_height = image_data.height();
+
+        // Use provided dimensions or fall back to image dimensions
+        let window_width = width.unwrap_or(img_width);
+        let window_height = height.unwrap_or(img_height);
+
+        // Create Slint image from raw pixel data
+        let slint_image = slint::Image::from_rgba8(slint::SharedPixelBuffer::clone_from_slice(
+            image_data.as_raw(),
+            img_width,
+            img_height,
+        ));
+
+        let window = ImageWindow::new()?;
+        let window = Rc::new(window);
+
+        // Set properties
+        window.set_source(slint_image);
+        window.set_image_opacity(opacity);
+        window.set_image_width(window_width as i32);
+        window.set_image_height(window_height as i32);
+
+        // Store window
+        WINDOWS.with(|windows| {
+            windows
+                .borrow_mut()
+                .insert(handle, WindowType::Image(window.clone()));
+        });
+
+        // Show window
+        window.show()?;
+
+        // Configure native window properties asynchronously
+        let window_weak = window.as_weak();
+        let _ = slint::spawn_local(async move {
+            if let Some(window) = window_weak.upgrade()
+                && let Ok(winit_window) = window.window().winit_window().await
+            {
+                winit_window.set_window_level(
+                    i_slint_backend_winit::winit::window::WindowLevel::AlwaysOnTop,
+                );
+                winit_window.set_resizable(false);
+                winit_window.set_decorations(false);
+                winit_window.set_window_icon(None);
+            }
+        });
+
+        debug!("Spawned image window: {:?}", handle);
         Ok(())
     }
 
@@ -243,6 +349,27 @@ impl WindowSpawnerHandle {
                 alignment,
             })
             .map_err(|e| anyhow::anyhow!("Failed to send spawn command: {}", e))?;
+        Ok(handle)
+    }
+
+    /// Spawn a new image window
+    pub fn spawn_image(
+        &self,
+        path: PathBuf,
+        width: Option<u32>,
+        height: Option<u32>,
+        opacity: f32,
+    ) -> Result<WindowHandle> {
+        let handle = WindowHandle(Uuid::new_v4());
+        self.command_tx
+            .send(WindowCommand::SpawnImage {
+                handle,
+                path,
+                width,
+                height,
+                opacity,
+            })
+            .map_err(|e| anyhow::anyhow!("Failed to send spawn image command: {}", e))?;
         Ok(handle)
     }
 

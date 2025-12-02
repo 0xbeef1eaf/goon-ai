@@ -12,7 +12,7 @@ use serde::Deserialize;
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::Arc;
-use tracing::{info, warn};
+use tracing::{error, info};
 use ts_rs::TS;
 
 #[derive(Deserialize, Debug, Default, TS)]
@@ -24,6 +24,8 @@ pub struct ImageOptions {
     pub tags: Option<Vec<String>>,
     /// Duration to display the image in seconds
     pub duration: Option<u64>,
+    /// Window opacity (0.0 to 1.0)
+    pub opacity: Option<f32>,
     #[serde(flatten)]
     pub window: WindowOptions,
 }
@@ -34,7 +36,7 @@ pub async fn op_show_image(
     state: Rc<RefCell<OpState>>,
     #[serde] options: Option<ImageOptions>,
 ) -> Result<String, OpError> {
-    let (_window_spawner, registry, mood) = {
+    let (window_spawner, registry, mood) = {
         let mut state = state.borrow_mut();
         check_permission(&mut state, "image")?;
         let spawner = state.borrow::<WindowSpawnerHandle>().clone();
@@ -53,17 +55,26 @@ pub async fn op_show_image(
         .ok_or_else(|| OpError::new("No image found matching tags"))?;
 
     let path = match asset {
-        Asset::Image(img) => &img.path,
+        Asset::Image(img) => img.path.clone(),
         _ => return Err(OpError::new("Selected asset is not an image")),
     };
 
-    // TODO: Implement image window spawning in the new architecture
-    // For now, log the image that would be shown
-    info!("Would show image: {:?}", path);
-    warn!("Image window spawning not yet implemented in new architecture");
+    info!("Spawning image window: {:?}", path);
 
-    // Return a placeholder handle
-    Ok(uuid::Uuid::new_v4().to_string())
+    // Get window dimensions from options
+    let width = opts.window.size.as_ref().map(|s| s.width);
+    let height = opts.window.size.as_ref().map(|s| s.height);
+    let opacity = opts.opacity.unwrap_or(1.0);
+
+    // Spawn the image window
+    let handle = window_spawner
+        .spawn_image(path, width, height, opacity)
+        .map_err(|e| {
+            error!("Failed to spawn image window: {}", e);
+            OpError::new(&e.to_string())
+        })?;
+
+    Ok(handle.0.to_string())
 }
 
 pub const TS_SOURCE: &str = include_str!("js/image.ts");
