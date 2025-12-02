@@ -74,6 +74,29 @@ pub fn generate_definitions(allowed_modules: &[String]) -> String {
 
                         for pattern in method_patterns {
                             if let Some(idx) = template.find(&pattern) {
+                                // Look back a reasonable amount to check for existing JSDoc
+                                // (JSDoc comments are typically within 20 lines / ~500 chars before the method)
+                                let look_back_start = idx.saturating_sub(500);
+                                let preceding_content = &template[look_back_start..idx];
+
+                                // Check if there's a JSDoc comment that ends close to the method
+                                // by looking for "*/" followed by mostly whitespace until the method
+                                if let Some(jsdoc_end) = preceding_content.rfind("*/") {
+                                    // Check if there's only whitespace and keywords between */ and the method
+                                    let between = &preceding_content[jsdoc_end + 2..];
+                                    let between_trimmed = between.trim();
+                                    // Allow common method modifiers between JSDoc and method name
+                                    let is_only_modifiers = between_trimmed.is_empty()
+                                        || between_trimmed == "static"
+                                        || between_trimmed == "static async"
+                                        || between_trimmed == "async"
+                                        || between_trimmed.starts_with("static");
+                                    if is_only_modifiers {
+                                        // Already has a JSDoc comment, skip injection
+                                        break;
+                                    }
+                                }
+
                                 // Find the start of the line (after previous newline)
                                 let line_start =
                                     template[..idx].rfind('\n').map(|i| i + 1).unwrap_or(0);

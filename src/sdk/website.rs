@@ -14,13 +14,16 @@ use std::sync::Arc;
 use ts_rs::TS;
 
 #[derive(Deserialize, Debug, Default, TS)]
-#[ts(export)]
 #[serde(rename_all = "camelCase")]
+/// Options for opening a website
 pub struct WebsiteOptions {
-    #[ts(optional)]
+    /// A list of additional tags to filter website URLs by, they will be filtered by mood tags already
     tags: Option<Vec<String>>,
 }
 
+/// Opens a website URL in the default browser.
+///
+/// @param options - Optional configuration including tags for URL selection.
 #[op2(async)]
 pub async fn op_open_website(
     state: Rc<RefCell<OpState>>,

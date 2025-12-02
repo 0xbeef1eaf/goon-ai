@@ -17,18 +17,30 @@ use tokio::sync::Mutex;
 use ts_rs::TS;
 
 #[derive(Deserialize, Debug, Default, TS)]
-#[ts(export)]
 #[serde(rename_all = "camelCase")]
+/// Options for playing a video
 pub struct VideoOptions {
+    /// A list of additional tags to filter videos by, they will be filtered by mood tags already
     pub tags: Option<Vec<String>>,
-    pub loop_: Option<bool>, // "loop" is a keyword
+    /// Whether to loop the video continuously
+    pub loop_: Option<bool>,
+    /// Volume level from 0.0 (muted) to 1.0 (full volume)
     pub volume: Option<f32>,
+    /// Whether to start playing automatically
     pub autoplay: Option<bool>,
+    /// Duration to play the video in seconds, after this the window will be closed automatically
     pub duration: Option<u64>,
-    #[serde(flatten)]
-    pub window: WindowOptions,
+    /// Window configuration options
+    pub window: Option<WindowOptions>,
 }
 
+/// Plays a video in a new window.
+///
+/// Returns a handle ID that can be used to control the window (move, resize, close).
+///
+/// @param options - Optional configuration including tags for asset selection,
+///                  window position, size, looping, and muting options.
+/// @returns A unique handle ID string for controlling this video window.
 #[op2(async)]
 #[string]
 pub async fn op_show_video(

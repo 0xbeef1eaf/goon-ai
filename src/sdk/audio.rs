@@ -22,12 +22,16 @@ fn parse_audio_handle(handle_id: &str) -> Result<AudioHandle, OpError> {
 }
 
 #[derive(Deserialize, Debug, Default, TS)]
-#[ts(export)]
 #[serde(rename_all = "camelCase")]
+/// Options for playing audio
 pub struct AudioOptions {
+    /// A list of additional tags to filter audio files by, they will be filtered by mood tags already
     tags: Option<Vec<String>>,
+    /// Whether to loop the audio continuously
     loop_: Option<bool>,
+    /// Volume level from 0.0 (muted) to 1.0 (full volume)
     volume: Option<f32>,
+    /// Duration to play the audio in seconds, after this playback will stop automatically
     duration: Option<f64>,
 }
 
@@ -82,6 +86,11 @@ pub async fn op_play_audio(
     Ok(handle.0.to_string())
 }
 
+/// Stops audio playback for the given handle.
+///
+/// Once stopped, the audio cannot be resumed. Use pause() if you want to resume later.
+///
+/// @param handle - The handle ID returned from play().
 #[op2(async)]
 pub async fn op_stop_audio(
     state: Rc<RefCell<OpState>>,
@@ -103,6 +112,11 @@ pub async fn op_stop_audio(
     Ok(())
 }
 
+/// Pauses audio playback for the given handle.
+///
+/// The audio can be resumed later with resume().
+///
+/// @param handle - The handle ID returned from play().
 #[op2(async)]
 pub async fn op_pause_audio(
     state: Rc<RefCell<OpState>>,
@@ -124,6 +138,9 @@ pub async fn op_pause_audio(
     Ok(())
 }
 
+/// Resumes audio playback for a paused handle.
+///
+/// @param handle - The handle ID returned from play().
 #[op2(async)]
 pub async fn op_resume_audio(
     state: Rc<RefCell<OpState>>,
@@ -145,6 +162,10 @@ pub async fn op_resume_audio(
     Ok(())
 }
 
+/// Sets the volume for a playing audio handle.
+///
+/// @param handle - The handle ID returned from play().
+/// @param volume - Volume level from 0.0 (silent) to 1.0 (full volume).
 #[op2(async)]
 pub async fn op_set_audio_volume(
     state: Rc<RefCell<OpState>>,

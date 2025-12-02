@@ -16,13 +16,16 @@ use std::sync::Arc;
 use ts_rs::TS;
 
 #[derive(Deserialize, Debug, Default, TS)]
-#[ts(export)]
 #[serde(rename_all = "camelCase")]
+/// Options for setting the desktop wallpaper
 pub struct WallpaperOptions {
-    #[ts(optional)]
+    /// A list of additional tags to filter wallpaper images by, they will be filtered by mood tags already
     tags: Option<Vec<String>>,
 }
 
+/// Sets the desktop wallpaper to an image from the pack.
+///
+/// @param options - Optional configuration including tags for asset selection.
 #[op2(async)]
 pub async fn op_set_wallpaper(
     state: Rc<RefCell<OpState>>,

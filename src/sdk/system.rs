@@ -13,6 +13,9 @@ pub struct LogCollector {
     pub logs: Arc<Mutex<Vec<String>>>,
 }
 
+/// Logs a message to the console.
+///
+/// @param msg - The message to log.
 #[op2(fast)]
 pub fn op_log(state: &mut OpState, #[string] msg: String) {
     if let Some(collector) = state.try_borrow::<LogCollector>()
@@ -23,6 +26,12 @@ pub fn op_log(state: &mut OpState, #[string] msg: String) {
     println!("[JS Log]: {}", msg);
 }
 
+/// Gets an asset path by tag.
+///
+/// This is an internal operation used by other SDK modules.
+///
+/// @param tag - The tag to search for.
+/// @returns The path to the selected asset.
 #[op2(async)]
 #[string]
 pub async fn op_get_asset(
@@ -34,6 +43,9 @@ pub async fn op_get_asset(
     Ok(format!("/path/to/asset/{}", tag))
 }
 
+/// Closes a window by its handle ID.
+///
+/// @param handle - The handle ID of the window to close.
 #[op2(async)]
 pub async fn op_close_window(
     state: Rc<RefCell<OpState>>,

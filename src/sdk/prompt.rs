@@ -12,21 +12,36 @@ use tracing::{debug, error, info};
 use ts_rs::TS;
 
 #[derive(Deserialize, Debug, Default, TS)]
-#[ts(export)]
 #[serde(rename_all = "camelCase")]
+/// Options for displaying a text prompt
 pub struct PromptOptions {
+    /// The text content to display in the prompt
     pub text: String,
+    /// Font size in pixels
     pub font_size: Option<f32>,
+    /// Text color as RGBA array [r, g, b, a] with values from 0.0 to 1.0
     pub color: Option<[f32; 4]>,
+    /// Background color as RGBA array [r, g, b, a] with values from 0.0 to 1.0
     pub background: Option<[f32; 4]>,
+    /// Padding around the text in pixels
     pub padding: Option<f32>,
+    /// Maximum width of the text area in pixels before wrapping
     pub max_width: Option<u32>,
-    pub alignment: Option<String>, // "left", "center", "right"
-    #[serde(flatten)]
-    pub window: WindowOptions,
+    /// Text alignment: "left", "center", or "right"
+    pub alignment: Option<String>,
+    /// Window configuration options
+    pub window: Option<WindowOptions>,
+    /// Duration to display the prompt in seconds, after this the window will be closed automatically
     pub duration: Option<f64>,
 }
 
+/// Displays a text prompt in a new window that the user has to copy for it to disappear.
+///
+/// Returns a handle ID that can be used to control the window (move, resize, close).
+///
+/// @param options - Optional configuration including the text to display,
+///                  font settings, colors, window position, and size.
+/// @returns A unique handle ID string for controlling this prompt window.
 #[op2(async)]
 #[string]
 pub async fn op_show_prompt(

@@ -16,20 +16,24 @@ use tracing::{error, info};
 use ts_rs::TS;
 
 #[derive(Deserialize, Debug, Default, TS)]
-#[ts(export)]
 #[serde(rename_all = "camelCase")]
 /// Options for displaying an image
 pub struct ImageOptions {
     /// A list of additional tags to filter images by, they will be filtered by mood tags already
     pub tags: Option<Vec<String>>,
-    /// Duration to display the image in seconds
+    /// Duration to display the image in seconds, after this the window will be closed automatically
     pub duration: Option<u64>,
-    /// Window opacity (0.0 to 1.0)
-    pub opacity: Option<f32>,
-    #[serde(flatten)]
-    pub window: WindowOptions,
+    /// Window configuration options
+    pub window: Option<WindowOptions>,
 }
 
+/// Displays an image in a new window.
+///
+/// Returns a handle ID that can be used to control the window (move, resize, close).
+///
+/// @param options - Optional configuration including tags for asset selection,
+///                  window position, size, and opacity.
+/// @returns A unique handle ID string for controlling this image window.
 #[op2(async)]
 #[string]
 pub async fn op_show_image(
@@ -62,9 +66,10 @@ pub async fn op_show_image(
     info!("Spawning image window: {:?}", path);
 
     // Get window dimensions from options
-    let width = opts.window.size.as_ref().map(|s| s.width);
-    let height = opts.window.size.as_ref().map(|s| s.height);
-    let opacity = opts.opacity.unwrap_or(1.0);
+    let window = opts.window.as_ref();
+    let width = window.and_then(|w| w.size.as_ref()).map(|s| s.width);
+    let height = window.and_then(|w| w.size.as_ref()).map(|s| s.height);
+    let opacity = window.and_then(|w| w.opacity).unwrap_or(1.0);
 
     // Spawn the image window
     let handle = window_spawner

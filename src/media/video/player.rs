@@ -38,19 +38,20 @@ impl VideoPlayer {
         }
 
         // Window options
-        if let Some(size) = &options.window.size {
+        let window = options.window.as_ref();
+        if let Some(size) = window.and_then(|w| w.size.as_ref()) {
             cmd.arg(format!("--geometry={}x{}", size.width, size.height));
         }
 
-        if let Some(pos) = &options.window.position {
+        if let Some(pos) = window.and_then(|w| w.position.as_ref()) {
             cmd.arg(format!("--geometry=+{}+{}", pos.x, pos.y));
         }
 
-        if options.window.always_on_top.unwrap_or(false) {
+        if window.and_then(|w| w.always_on_top).unwrap_or(false) {
             cmd.arg("--ontop");
         }
 
-        if !options.window.decorations.unwrap_or(true) {
+        if !window.and_then(|w| w.decorations).unwrap_or(true) {
             cmd.arg("--no-border");
         }
 

@@ -15,6 +15,8 @@ pub struct HandleMethodConfig {
     pub method_name: &'static str,
     /// The op to call (e.g., "op_close_window", "op_stop_audio")
     pub op_name: &'static str,
+    /// Documentation for this method
+    pub docs: &'static str,
 }
 
 /// Configuration for generating a module's runtime code
@@ -53,10 +55,14 @@ pub struct MethodConfig {
     pub method_name: &'static str,
     /// Parameter name if the method takes an argument
     pub param_name: Option<&'static str>,
+    /// Parameter type (e.g., "string", "number")
+    pub param_type: Option<&'static str>,
     /// Whether the method is synchronous
     pub is_sync: bool,
     /// Whether the method returns a value (not void)
     pub returns_value: bool,
+    /// Return type if returns_value is true (e.g., "string", "Mood")
+    pub return_type: Option<&'static str>,
 }
 
 /// Convert a Rust op function name to a TypeScript method name.
@@ -85,6 +91,10 @@ fn op_name_to_ts_method(op_name: &str) -> String {
 fn generate_handle_class(handle_name: &str, methods: &[HandleMethodConfig]) -> String {
     let mut output = format!(
         r#"class {handle_name} {{
+    /**
+     * Creates a new handle with the given ID.
+     * @param id - The unique identifier for this handle
+     */
     constructor(id) {{
         this.id = id;
     }}
@@ -93,14 +103,24 @@ fn generate_handle_class(handle_name: &str, methods: &[HandleMethodConfig]) -> S
     );
 
     for method in methods {
+        let doc = if method.docs.is_empty() {
+            String::new()
+        } else {
+            format!(
+                r#"
+    /**
+     * {}
+     */
+"#,
+                method.docs
+            )
+        };
         output.push_str(&format!(
-            r#"
-    async {method_name}() {{
-        await Deno.core.ops.{op_name}(this.id);
+            r#"{}    async {}() {{
+        await Deno.core.ops.{}(this.id);
     }}
 "#,
-            method_name = method.method_name,
-            op_name = method.op_name
+            doc, method.method_name, method.op_name
         ));
     }
 
@@ -135,33 +155,47 @@ fn generate_method(
     method_name: &str,
     op_name: &str,
     param_name: Option<&str>,
+    param_type: Option<&str>,
     return_handle: Option<&str>,
     docs: &[String],
     is_sync: bool,
 ) -> String {
     let jsdoc = generate_jsdoc(docs, "    ");
 
-    let params = param_name.unwrap_or("").to_string();
-    let args = params.clone();
+    let params = match (param_name, param_type) {
+        (Some(name), Some(typ)) => format!("{}: {}", name, typ),
+        (Some(name), None) => name.to_string(),
+        _ => String::new(),
+    };
+    let args = param_name.unwrap_or("").to_string();
 
-    let body = match return_handle {
-        Some(handle) => format!(
-            r#"const id = await Deno.core.ops.{}({});
+    let (body, return_type) = match return_handle {
+        Some(handle) => (
+            format!(
+                r#"const id = await Deno.core.ops.{}({});
         return new {}(id);"#,
-            op_name, args, handle
+                op_name, args, handle
+            ),
+            format!(": Promise<{}>", handle),
         ),
-        None if is_sync => format!("Deno.core.ops.{}({});", op_name, args),
-        None => format!("await Deno.core.ops.{}({});", op_name, args),
+        None if is_sync => (
+            format!("Deno.core.ops.{}({});", op_name, args),
+            ": void".to_string(),
+        ),
+        None => (
+            format!("await Deno.core.ops.{}({});", op_name, args),
+            ": Promise<void>".to_string(),
+        ),
     };
 
     let async_keyword = if is_sync { "" } else { "async " };
 
     format!(
-        r#"{}    static {}{}({}) {{
+        r#"{}    static {}{}({}){} {{
         {}
     }}
 "#,
-        jsdoc, async_keyword, method_name, params, body
+        jsdoc, async_keyword, method_name, params, return_type, body
     )
 }
 
@@ -170,29 +204,42 @@ fn generate_returning_method(
     method_name: &str,
     op_name: &str,
     param_name: Option<&str>,
+    param_type: Option<&str>,
+    return_type: Option<&str>,
     docs: &[String],
     is_sync: bool,
 ) -> String {
     let jsdoc = generate_jsdoc(docs, "    ");
 
-    let params = param_name.unwrap_or("").to_string();
-    let args = params.clone();
+    let params = match (param_name, param_type) {
+        (Some(name), Some(typ)) => format!("{}: {}", name, typ),
+        (Some(name), None) => name.to_string(),
+        _ => String::new(),
+    };
+    let args = param_name.unwrap_or("").to_string();
 
-    let (body, async_keyword) = if is_sync {
-        (format!("return Deno.core.ops.{}({});", op_name, args), "")
+    let ret_type = return_type.unwrap_or("any");
+
+    let (body, async_keyword, full_return_type) = if is_sync {
+        (
+            format!("return Deno.core.ops.{}({});", op_name, args),
+            "",
+            format!(": {}", ret_type),
+        )
     } else {
         (
             format!("return await Deno.core.ops.{}({});", op_name, args),
             "async ",
+            format!(": Promise<{}>", ret_type),
         )
     };
 
     format!(
-        r#"{}    static {}{}({}) {{
+        r#"{}    static {}{}({}){} {{
         {}
     }}
 "#,
-        jsdoc, async_keyword, method_name, params, body
+        jsdoc, async_keyword, method_name, params, full_return_type, body
     )
 }
 
@@ -201,9 +248,18 @@ fn generate_void_method(
     method_name: &str,
     op_name: &str,
     param_name: Option<&str>,
+    param_type: Option<&str>,
     docs: &[String],
 ) -> String {
-    generate_method(method_name, op_name, param_name, None, docs, false)
+    generate_method(
+        method_name,
+        op_name,
+        param_name,
+        param_type,
+        None,
+        docs,
+        false,
+    )
 }
 
 /// Generate a sync void method
@@ -211,9 +267,18 @@ fn generate_sync_void_method(
     method_name: &str,
     op_name: &str,
     param_name: Option<&str>,
+    param_type: Option<&str>,
     docs: &[String],
 ) -> String {
-    generate_method(method_name, op_name, param_name, None, docs, true)
+    generate_method(
+        method_name,
+        op_name,
+        param_name,
+        param_type,
+        None,
+        docs,
+        true,
+    )
 }
 
 /// Generate the globalThis registration code
@@ -253,12 +318,15 @@ pub fn generate_module_runtime(config: &ModuleConfig) -> String {
     if !config.primary_op.is_empty() {
         let primary_docs = find_op_docs(&ops, config.primary_op);
         let param = config.options_type.map(|_| "options");
+        let param_type = config.options_type;
         let primary_method = if config.primary_returns_value {
             // Primary method returns a value (not void, not handle)
             generate_returning_method(
                 config.primary_method,
                 config.primary_op,
                 param,
+                param_type,
+                None, // Return type will be inferred or set in config
                 &primary_docs,
                 false,
             )
@@ -268,6 +336,7 @@ pub fn generate_module_runtime(config: &ModuleConfig) -> String {
                 config.primary_method,
                 config.primary_op,
                 param,
+                param_type,
                 config.handle_class_name,
                 &primary_docs,
                 false,
@@ -284,13 +353,27 @@ pub fn generate_module_runtime(config: &ModuleConfig) -> String {
                 method.method_name,
                 method.op_name,
                 method.param_name,
+                method.param_type,
+                method.return_type,
                 &docs,
                 method.is_sync,
             )
         } else if method.is_sync {
-            generate_sync_void_method(method.method_name, method.op_name, method.param_name, &docs)
+            generate_sync_void_method(
+                method.method_name,
+                method.op_name,
+                method.param_name,
+                method.param_type,
+                &docs,
+            )
         } else {
-            generate_void_method(method.method_name, method.op_name, method.param_name, &docs)
+            generate_void_method(
+                method.method_name,
+                method.op_name,
+                method.param_name,
+                method.param_type,
+                &docs,
+            )
         };
         output.push_str(&generated);
     }
@@ -313,6 +396,7 @@ pub fn generate_image_runtime() -> String {
         handle_methods: vec![HandleMethodConfig {
             method_name: "close",
             op_name: "op_close_window",
+            docs: "Closes the image window and releases resources.",
         }],
         primary_op: "op_show_image",
         primary_method: "show",
@@ -333,6 +417,7 @@ pub fn generate_video_runtime() -> String {
         handle_methods: vec![HandleMethodConfig {
             method_name: "close",
             op_name: "op_close_window",
+            docs: "Closes the video window and stops playback.",
         }],
         primary_op: "op_show_video",
         primary_method: "play",
@@ -354,14 +439,17 @@ pub fn generate_audio_runtime() -> String {
             HandleMethodConfig {
                 method_name: "stop",
                 op_name: "op_stop_audio",
+                docs: "Stops audio playback. Cannot be resumed after stopping.",
             },
             HandleMethodConfig {
                 method_name: "pause",
                 op_name: "op_pause_audio",
+                docs: "Pauses audio playback. Can be resumed with resume().",
             },
             HandleMethodConfig {
                 method_name: "resume",
                 op_name: "op_resume_audio",
+                docs: "Resumes paused audio playback.",
             },
         ],
         primary_op: "op_play_audio",
@@ -390,22 +478,28 @@ pub fn generate_system_runtime() -> String {
                 op_name: "op_get_asset",
                 method_name: "getAsset",
                 param_name: Some("tag"),
+                param_type: Some("string"),
                 is_sync: false,
                 returns_value: true,
+                return_type: Some("string"),
             },
             MethodConfig {
                 op_name: "op_close_window",
                 method_name: "closeWindow",
                 param_name: Some("handleId"),
+                param_type: Some("string"),
                 is_sync: false,
                 returns_value: false,
+                return_type: None,
             },
             MethodConfig {
                 op_name: "op_log",
                 method_name: "log",
                 param_name: Some("message"),
+                param_type: Some("string"),
                 is_sync: true,
                 returns_value: false,
+                return_type: None,
             },
         ],
         source_path: "src/sdk/system.rs",
@@ -428,8 +522,10 @@ pub fn generate_pack_runtime() -> String {
             op_name: "op_set_current_mood",
             method_name: "setMood",
             param_name: Some("moodName"),
+            param_type: Some("string"),
             is_sync: false,
             returns_value: false,
+            return_type: None,
         }],
         source_path: "src/sdk/pack.rs",
     })
@@ -445,6 +541,7 @@ pub fn generate_prompt_runtime() -> String {
         handle_methods: vec![HandleMethodConfig {
             method_name: "close",
             op_name: "op_close_window",
+            docs: "Closes the prompt window.",
         }],
         primary_op: "op_show_prompt",
         primary_method: "show",
@@ -533,6 +630,7 @@ mod tests {
         let methods = vec![HandleMethodConfig {
             method_name: "close",
             op_name: "op_close_window",
+            docs: "Closes the window.",
         }];
         let output = generate_handle_class("ImageHandle", &methods);
         assert!(output.contains("class ImageHandle"));

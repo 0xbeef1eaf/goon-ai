@@ -15,15 +15,24 @@ use std::sync::Arc;
 use ts_rs::TS;
 
 #[derive(Deserialize, Debug, Default, TS)]
-#[ts(export)]
 #[serde(rename_all = "camelCase")]
+/// Options for displaying a hypnotic pattern
 pub struct HypnoOptions {
+    /// A list of additional tags to filter hypno patterns by, they will be filtered by mood tags already
     pub tags: Option<Vec<String>>,
+    /// Duration to display the pattern in seconds, after this the window will be closed automatically
     pub duration: Option<u64>,
-    #[serde(flatten)]
-    pub window: WindowOptions,
+    /// Window configuration options
+    pub window: Option<WindowOptions>,
 }
 
+/// Displays a hypnotic pattern in a new window.
+///
+/// Returns a handle ID that can be used to control the window (move, resize, close).
+///
+/// @param options - Optional configuration including tags for pattern selection,
+///                  duration, window position, and size.
+/// @returns A unique handle ID string for controlling this hypno window.
 #[op2(async)]
 pub async fn op_show_hypno(
     state: Rc<RefCell<OpState>>,

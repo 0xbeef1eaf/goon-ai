@@ -91,6 +91,7 @@ jobs:
     name: Merge Dependabot PRs
     runs-on: ubuntu-latest
     permissions:
+      contents: write
       pull-requests: write
     needs: [test, fmt, clippy]
     if: github.actor == 'dependabot[bot]'
@@ -101,7 +102,7 @@ jobs:
           script: |
             const pr = context.payload.pull_request;
             if (pr && pr.user.login === 'dependabot[bot]') {
-              await github.pulls.merge({
+              await github.rest.pulls.merge({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 pull_number: pr.number,
