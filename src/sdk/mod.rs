@@ -76,7 +76,7 @@ mod tests {
         let defs = generate_typescript_definitions(&modules);
         assert!(defs.contains("/** GoonAI SDK */"));
         assert!(defs.contains("interface WindowHandle")); // From types.ts (always included)
-        assert!(defs.contains("class Pack")); // From pack.ts (always included)
+        assert!(defs.contains("class pack")); // From pack.ts (always included)
         assert!(!defs.contains("class image"));
     }
 

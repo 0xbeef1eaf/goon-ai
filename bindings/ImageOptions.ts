@@ -7,7 +7,7 @@ import type { Size } from "./Size";
  */
 export type ImageOptions = {
 /**
- * Tags to filter the images by
+ * A list of additional tags to filter images by, they will be filtered by mood tags already
  */
 tags: Array<string> | null,
 /**

@@ -20,7 +20,7 @@ use ts_rs::TS;
 #[serde(rename_all = "camelCase")]
 /// Options for displaying an image
 pub struct ImageOptions {
-    /// Tags to filter the images by
+    /// A list of additional tags to filter images by, they will be filtered by mood tags already
     pub tags: Option<Vec<String>>,
     /// Duration to display the image in seconds
     pub duration: Option<u64>,
