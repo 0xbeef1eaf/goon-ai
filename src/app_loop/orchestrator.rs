@@ -2,7 +2,7 @@ use crate::app_loop::state::{LoopState, MessageType};
 use crate::assets::loader::AssetLoader;
 use crate::config::pack::PackConfig;
 use crate::config::settings::Settings;
-use crate::gui::slint_controller::SlintGuiController;
+use crate::gui::WindowSpawnerHandle;
 use crate::llm::client::LLMClient;
 use crate::llm::conversation::ConversationManager;
 use crate::llm::prompt::PromptBuilder;
@@ -20,7 +20,7 @@ pub struct Orchestrator {
     settings: Arc<Settings>,
     pack_config: Arc<PackConfig>,
     permissions: Arc<PermissionChecker>,
-    gui_controller: Arc<SlintGuiController>,
+    window_spawner: WindowSpawnerHandle,
 }
 
 impl Orchestrator {
@@ -28,14 +28,14 @@ impl Orchestrator {
         settings: Arc<Settings>,
         pack_config: Arc<PackConfig>,
         permissions: Arc<PermissionChecker>,
-        gui_controller: Arc<SlintGuiController>,
+        window_spawner: WindowSpawnerHandle,
     ) -> Self {
         Self {
             state: LoopState::new(),
             settings,
             pack_config,
             permissions,
-            gui_controller,
+            window_spawner,
         }
     }
 
@@ -87,7 +87,7 @@ impl Orchestrator {
 
         let context = RuntimeContext {
             permissions: (*self.permissions).clone(),
-            gui_controller: self.gui_controller.clone(),
+            window_spawner: self.window_spawner.clone(),
             registry: registry.clone(),
             mood: mood.clone(),
             max_audio_concurrent: self.settings.runtime.popups.audio.max.unwrap_or(1) as usize,
@@ -214,7 +214,7 @@ impl Orchestrator {
 
         let context = RuntimeContext {
             permissions: (*self.permissions).clone(),
-            gui_controller: self.gui_controller.clone(),
+            window_spawner: self.window_spawner.clone(),
             registry: registry.clone(),
             mood: mood.clone(),
             max_audio_concurrent: self.settings.runtime.popups.audio.max.unwrap_or(1) as usize,

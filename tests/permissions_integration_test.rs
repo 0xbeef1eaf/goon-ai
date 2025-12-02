@@ -1,5 +1,4 @@
-use anyhow::Result;
-use goon_ai::gui::slint_controller::SlintGuiController;
+use goon_ai::gui::WindowSpawner;
 use goon_ai::permissions::{Permission, PermissionChecker, PermissionResolver, PermissionSet};
 use goon_ai::runtime::GoonRuntime;
 use goon_ai::runtime::runtime::RuntimeContext;
@@ -29,8 +28,8 @@ async fn test_full_permission_flow() {
     // 3. Initialize Runtime with Resolved Permissions
     let checker = PermissionChecker::new(active_perms.clone());
 
-    // Use SlintGuiController
-    let gui_controller = std::sync::Arc::new(SlintGuiController::new());
+    // Use WindowSpawner
+    let (window_spawner, _spawner) = WindowSpawner::create();
     let registry = std::sync::Arc::new(goon_ai::assets::registry::AssetRegistry::new());
     let mood = goon_ai::config::pack::Mood {
         name: "Test".to_string(),
@@ -41,7 +40,7 @@ async fn test_full_permission_flow() {
 
     let context = RuntimeContext {
         permissions: checker.clone(),
-        gui_controller: gui_controller.clone(),
+        window_spawner: window_spawner.clone(),
         registry: registry.clone(),
         mood: mood.clone(),
         max_audio_concurrent: 10,
@@ -78,7 +77,7 @@ async fn test_full_permission_flow() {
     // Create a new runtime instance to avoid module name collision ("main.js")
     let context2 = RuntimeContext {
         permissions: checker.clone(),
-        gui_controller: gui_controller.clone(),
+        window_spawner: window_spawner.clone(),
         registry: registry.clone(),
         mood: mood.clone(),
         max_audio_concurrent: 10,

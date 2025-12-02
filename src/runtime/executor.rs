@@ -1,12 +1,7 @@
-use crate::assets::registry::AssetRegistry;
 use crate::config::pack::Mood;
-use crate::gui::window_manager::GuiInterface;
-use crate::permissions::PermissionChecker;
 use crate::runtime::GoonRuntime;
 use crate::typescript::TypeScriptCompiler;
 use anyhow::Result;
-
-use std::sync::Arc;
 
 pub struct Executor {
     compiler: TypeScriptCompiler,
@@ -40,8 +35,10 @@ impl Executor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::gui::slint_controller::SlintGuiController;
+    use crate::assets::registry::AssetRegistry;
+    use crate::gui::WindowSpawner;
     use crate::permissions::{PermissionChecker, PermissionSet};
+    use std::sync::Arc;
 
     #[tokio::test]
     async fn test_executor_run() {
@@ -49,7 +46,7 @@ mod tests {
         let set = PermissionSet::new();
         let permissions = PermissionChecker::new(set);
 
-        let gui_controller = Arc::new(SlintGuiController::new());
+        let (window_handle, _spawner) = WindowSpawner::create();
         let registry = Arc::new(AssetRegistry::new());
         let mood = Mood {
             name: "Test".to_string(),
@@ -60,7 +57,7 @@ mod tests {
 
         let context = crate::runtime::runtime::RuntimeContext {
             permissions,
-            gui_controller,
+            window_spawner: window_handle,
             registry,
             mood,
             max_audio_concurrent: 10,
@@ -80,7 +77,7 @@ mod tests {
         let set = PermissionSet::new();
         let permissions = PermissionChecker::new(set);
 
-        let gui_controller = Arc::new(SlintGuiController::new());
+        let (window_handle, _spawner) = WindowSpawner::create();
         let registry = Arc::new(AssetRegistry::new());
         let mood = Mood {
             name: "Test".to_string(),
@@ -91,7 +88,7 @@ mod tests {
 
         let context = crate::runtime::runtime::RuntimeContext {
             permissions,
-            gui_controller,
+            window_spawner: window_handle,
             registry,
             mood,
             max_audio_concurrent: 10,

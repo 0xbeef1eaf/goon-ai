@@ -1,7 +1,7 @@
 use crate::app_loop::orchestrator::Orchestrator;
 use crate::config::pack::PackConfig;
 use crate::config::settings::Settings;
-use crate::gui::slint_controller::SlintGuiController;
+use crate::gui::{WindowSpawner, run_event_loop};
 use crate::permissions::{PermissionChecker, PermissionResolver, PermissionSet};
 use anyhow::Result;
 use std::path::PathBuf;
@@ -80,14 +80,14 @@ impl App {
         let max_video = self.settings.runtime.popups.video.max.unwrap_or(1) as usize;
         println!("Max concurrent audio: {}, video: {}", max_audio, max_video);
 
-        // Initialize Slint GUI controller
-        let gui_controller = Arc::new(SlintGuiController::new());
+        // Create window spawner channel pair
+        let (window_handle, window_spawner) = WindowSpawner::create();
 
         let mut orchestrator = Orchestrator::new(
             self.settings.clone(),
             self.pack_config.clone(),
             self.permissions.clone(),
-            gui_controller.clone(),
+            window_handle.clone(),
         );
 
         // Schedule the orchestrator to run within the Slint event loop context
@@ -100,8 +100,8 @@ impl App {
         })
         .map_err(|e| anyhow::anyhow!("Failed to spawn orchestrator task: {}", e))?;
 
-        // Run Slint event loop (blocks on main thread)
-        SlintGuiController::run_event_loop()?;
+        // Run Slint event loop with window spawner
+        run_event_loop(window_spawner)?;
 
         Ok(())
     }
@@ -116,14 +116,14 @@ impl App {
         let max_video = self.settings.runtime.popups.video.max.unwrap_or(1) as usize;
         println!("Max concurrent audio: {}, video: {}", max_audio, max_video);
 
-        // Initialize Slint GUI controller
-        let gui_controller = Arc::new(SlintGuiController::new());
+        // Create window spawner channel pair
+        let (window_handle, window_spawner) = WindowSpawner::create();
 
         let mut orchestrator = Orchestrator::new(
             self.settings.clone(),
             self.pack_config.clone(),
             self.permissions.clone(),
-            gui_controller.clone(),
+            window_handle.clone(),
         );
 
         // Clone script for the closure
@@ -141,8 +141,8 @@ impl App {
         })
         .map_err(|e| anyhow::anyhow!("Failed to spawn script task: {}", e))?;
 
-        // Run Slint event loop (blocks on main thread)
-        SlintGuiController::run_event_loop()?;
+        // Run Slint event loop with window spawner
+        run_event_loop(window_spawner)?;
 
         Ok(())
     }

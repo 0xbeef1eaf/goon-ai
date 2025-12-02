@@ -1,18 +1,17 @@
-use crate::gui::slint_controller::SlintGuiController;
+use crate::gui::WindowSpawnerHandle;
 use crate::server::routes;
 use axum::Router;
-use std::sync::Arc;
 use tower_http::cors::CorsLayer;
 use tower_http::services::ServeDir;
 use tower_http::trace::TraceLayer;
 
 #[derive(Clone)]
 pub struct AppState {
-    pub gui_controller: Arc<SlintGuiController>,
+    pub window_spawner: WindowSpawnerHandle,
 }
 
-pub async fn create_app(gui_controller: Arc<SlintGuiController>) -> Router {
-    let state = AppState { gui_controller };
+pub async fn create_app(window_spawner: WindowSpawnerHandle) -> Router {
+    let state = AppState { window_spawner };
 
     Router::new()
         .merge(routes::api_routes())

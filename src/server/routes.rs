@@ -173,7 +173,7 @@ async fn run_code(State(state): State<AppState>, Json(req): Json<RunRequest>) ->
     let logs = Arc::new(Mutex::new(Vec::new()));
     let logs_clone = logs.clone();
     let code = req.code.clone();
-    let gui_controller = state.gui_controller.clone();
+    let window_spawner = state.window_spawner.clone();
 
     let (tx, rx) = tokio::sync::oneshot::channel();
 
@@ -210,7 +210,7 @@ async fn run_code(State(state): State<AppState>, Json(req): Json<RunRequest>) ->
 
             let context = RuntimeContext {
                 permissions,
-                gui_controller,
+                window_spawner,
                 registry,
                 mood,
                 max_audio_concurrent: 5,

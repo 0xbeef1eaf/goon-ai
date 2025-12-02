@@ -22,7 +22,8 @@ settings.yaml
 *.swp
 
 # Packs
-/packs/*
+/packs/
 !/packs/TestPack/
 
 web/node_modules/
+web/dist/

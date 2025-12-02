@@ -7,7 +7,8 @@ const handle = await goon.textPrompt.show({
     alignment: "center",
     window: {
         size: { width: 800, height: 600 },
-        position: { x: 100, y: 100 }
+        position: { x: 100, y: 100 },
+        decorations: true
     }
 });
 

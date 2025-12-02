@@ -1,6 +1,6 @@
 use crate::assets::registry::AssetRegistry;
 use crate::config::pack::Mood;
-use crate::gui::slint_controller::SlintGuiController;
+use crate::gui::WindowSpawnerHandle;
 use crate::media::audio::manager::AudioManager;
 use crate::media::video::manager::VideoManager;
 use crate::permissions::PermissionChecker;
@@ -17,7 +17,7 @@ use std::sync::{Arc, Mutex};
 
 pub struct RuntimeContext {
     pub permissions: PermissionChecker,
-    pub gui_controller: Arc<SlintGuiController>,
+    pub window_spawner: WindowSpawnerHandle,
     pub registry: Arc<AssetRegistry>,
     pub mood: Mood,
     pub max_audio_concurrent: usize,
@@ -59,7 +59,7 @@ impl GoonRuntime {
             let op_state = js_runtime.op_state();
             let mut op_state = op_state.borrow_mut();
             op_state.put(context.permissions);
-            op_state.put(context.gui_controller);
+            op_state.put(context.window_spawner);
             op_state.put(context.registry);
             op_state.put(context.mood);
 
@@ -129,16 +129,15 @@ impl GoonRuntime {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::gui::slint_controller::SlintGuiController;
+    use crate::gui::WindowSpawner;
     use crate::permissions::{Permission, PermissionChecker, PermissionSet};
 
-    #[tokio::test]
-    async fn test_runtime_execution() {
+    fn create_test_context() -> (RuntimeContext, crate::gui::WindowSpawner) {
         let mut set = PermissionSet::new();
         set.add(Permission::Image);
         let permissions = PermissionChecker::new(set);
 
-        let gui_controller = Arc::new(SlintGuiController::new());
+        let (window_handle, window_spawner) = WindowSpawner::create();
         let registry = Arc::new(AssetRegistry::new());
         let mood = Mood {
             name: "Test".to_string(),
@@ -148,12 +147,18 @@ mod tests {
         };
         let context = RuntimeContext {
             permissions,
-            gui_controller,
+            window_spawner: window_handle,
             registry,
             mood,
             max_audio_concurrent: 10,
             max_video_concurrent: 3,
         };
+        (context, window_spawner)
+    }
+
+    #[tokio::test]
+    async fn test_runtime_execution() {
+        let (context, _spawner) = create_test_context();
         let mut runtime = GoonRuntime::new(context);
 
         let code = r#"
@@ -168,26 +173,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_bigint_duration() {
-        let mut set = PermissionSet::new();
-        set.add(Permission::Image);
-        let permissions = PermissionChecker::new(set);
-
-        let gui_controller = Arc::new(SlintGuiController::new());
-        let registry = Arc::new(AssetRegistry::new());
-        let mood = Mood {
-            name: "Test".to_string(),
-            description: "".to_string(),
-            tags: vec![],
-            prompt: None,
-        };
-        let context = RuntimeContext {
-            permissions,
-            gui_controller,
-            registry,
-            mood,
-            max_audio_concurrent: 10,
-            max_video_concurrent: 3,
-        };
+        let (context, _spawner) = create_test_context();
         let mut runtime = GoonRuntime::new(context);
 
         let code = r#"
@@ -214,7 +200,7 @@ mod tests {
         let set = PermissionSet::new(); // No permissions
         let permissions = PermissionChecker::new(set);
 
-        let gui_controller = Arc::new(SlintGuiController::new());
+        let (window_handle, _spawner) = WindowSpawner::create();
         let registry = Arc::new(AssetRegistry::new());
         let mood = Mood {
             name: "Test".to_string(),
@@ -224,7 +210,7 @@ mod tests {
         };
         let context = RuntimeContext {
             permissions,
-            gui_controller,
+            window_spawner: window_handle,
             registry,
             mood,
             max_audio_concurrent: 10,
@@ -248,7 +234,7 @@ mod tests {
         set.add(Permission::Image); // Just some permission
         let permissions = PermissionChecker::new(set);
 
-        let gui_controller = Arc::new(SlintGuiController::new());
+        let (window_handle, _spawner) = WindowSpawner::create();
         let registry = Arc::new(AssetRegistry::new());
         let mood = Mood {
             name: "TestMood".to_string(),
@@ -258,7 +244,7 @@ mod tests {
         };
         let context = RuntimeContext {
             permissions,
-            gui_controller,
+            window_spawner: window_handle,
             registry,
             mood,
             max_audio_concurrent: 10,

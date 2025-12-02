@@ -1,40 +1,54 @@
-import { VerticalBox, HorizontalBox } from "std-widgets.slint";
+import { LineEdit, VerticalBox } from "std-widgets.slint";
 
 export component PromptWindow inherits Window {
     in property <string> prompt-text;
     in property <color> text-color;
     in property <color> background-color;
     in property <float> font-size;
-    in property <string> user-input;
-    in property <bool> show-cursor;
+    in-out property <string> user-input;
+    in property <bool> show-cursor: true;
     in property <string> alignment: "left";
 
-    Rectangle {
-        background: root.background-color;
+    callback input-submitted(string);
 
-        VerticalBox {
-            padding: 40px;
-            spacing: 20px;
+    title: "goon.ai Prompt";
+    no-frame: true;
+    width: 420px;
+    height: 420px;
+    background: root.background-color;
+    default-font-size: root.font-size * 1px;
+    forward-focus: user-text-input;
 
-            // Main prompt text
-            Text {
-                text: root.prompt-text;
-                color: root.text-color;
-                font-size: root.font-size * 1px;
-                wrap: word-wrap;
-                horizontal-alignment: root.alignment == "center" ? center :
-                                      root.alignment == "right" ? right : left;
-            }
+    VerticalBox {
+        padding: 16px;
+        spacing: 12px;
 
-            // User input display (if any)
-            if root.user-input != "" : Text {
-                text: "You typed: " + root.user-input + (root.show-cursor ? "▌" : "");
-                color: root.text-color;
-                font-size: (root.font-size * 0.8) * 1px;
-                wrap: word-wrap;
-                horizontal-alignment: root.alignment == "center" ? center :
-                                      root.alignment == "right" ? right : left;
-            }
+        Text {
+            text: "Focus the text field and copy the prompt:";
+            wrap: word-wrap;
+            horizontal-alignment: center;
         }
+
+        Text {
+            text: root.prompt-text;
+            color: root.text-color;
+            font-size: root.font-size * 1px;
+            wrap: word-wrap;
+            horizontal-alignment: root.alignment == "center" ? center : root.alignment == "right" ? right : left;
+        }
+
+        user-text-input := LineEdit {
+            placeholder-text: "Type here...";
+            text <=> root.user-input;
+            accepted(text) => root.input-submitted(text);
+        }
+    }
+
+    public function grab-focus() {
+        user-text-input.focus();
+    }
+
+    init => {
+        user-text-input.focus();
     }
 }

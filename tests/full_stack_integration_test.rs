@@ -2,7 +2,7 @@ use goon_ai::assets::loader::AssetLoader;
 use goon_ai::assets::selector::AssetSelector;
 use goon_ai::assets::types::Asset;
 use goon_ai::config::pack::{Asset as ConfigAsset, Assets, Mood, PackConfig, PackMeta};
-use goon_ai::gui::slint_controller::SlintGuiController;
+use goon_ai::gui::WindowSpawner;
 use goon_ai::permissions::{Permission, PermissionChecker, PermissionResolver, PermissionSet};
 use goon_ai::runtime::GoonRuntime;
 use goon_ai::runtime::runtime::RuntimeContext;
@@ -87,14 +87,14 @@ async fn test_asset_loading_to_permission_check() {
     // 5. Runtime Execution
     // We use the checker derived from the resolution step.
 
-    // Use SlintGuiController
-    let gui_controller = std::sync::Arc::new(SlintGuiController::new());
+    // Use WindowSpawner
+    let (window_spawner, _spawner) = WindowSpawner::create();
     let registry_arc = std::sync::Arc::new(registry);
     let mood_clone = mood.clone();
 
     let context = RuntimeContext {
         permissions: checker.clone(),
-        gui_controller: gui_controller.clone(),
+        window_spawner: window_spawner.clone(),
         registry: registry_arc.clone(),
         mood: mood_clone.clone(),
         max_audio_concurrent: 10,
@@ -126,7 +126,7 @@ async fn test_asset_loading_to_permission_check() {
     // Create a new runtime to avoid module name collision
     let context2 = RuntimeContext {
         permissions: checker.clone(),
-        gui_controller: gui_controller.clone(),
+        window_spawner: window_spawner.clone(),
         registry: registry_arc.clone(),
         mood: mood_clone.clone(),
         max_audio_concurrent: 10,

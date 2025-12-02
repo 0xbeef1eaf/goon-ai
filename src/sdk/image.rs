@@ -2,11 +2,7 @@ use crate::assets::registry::AssetRegistry;
 use crate::assets::selector::AssetSelector;
 use crate::assets::types::Asset;
 use crate::config::pack::Mood;
-use crate::gui::slint_controller::SlintGuiController;
-use crate::gui::window_manager::GuiInterface;
-use crate::media::image::animation::Animation;
-use crate::media::image::loader::load_image;
-use crate::media::image::renderer::ImageContent;
+use crate::gui::WindowSpawnerHandle;
 use crate::runtime::error::OpError;
 use crate::runtime::utils::check_permission;
 use crate::sdk::types::WindowOptions;
@@ -16,6 +12,7 @@ use serde::Deserialize;
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::Arc;
+use tracing::{info, warn};
 use ts_rs::TS;
 
 #[derive(Deserialize, Debug, Default, TS)]
@@ -37,13 +34,13 @@ pub async fn op_show_image(
     state: Rc<RefCell<OpState>>,
     #[serde] options: Option<ImageOptions>,
 ) -> Result<String, OpError> {
-    let (gui_controller, registry, mood) = {
+    let (_window_spawner, registry, mood) = {
         let mut state = state.borrow_mut();
         check_permission(&mut state, "image")?;
-        let gui = state.borrow::<Arc<SlintGuiController>>().clone();
+        let spawner = state.borrow::<WindowSpawnerHandle>().clone();
         let registry = state.borrow::<Arc<AssetRegistry>>().clone();
         let mood = state.borrow::<Mood>().clone();
-        (gui, registry, mood)
+        (spawner, registry, mood)
     };
 
     let opts = options.unwrap_or_default();
@@ -60,68 +57,13 @@ pub async fn op_show_image(
         _ => return Err(OpError::new("Selected asset is not an image")),
     };
 
-    let path_str = path.to_str().unwrap();
-    let (content, width, height) = if path_str.to_lowercase().ends_with(".gif") {
-        if let Ok(anim) = Animation::load(path) {
-            let w = anim.frames[0].buffer.width();
-            let h = anim.frames[0].buffer.height();
-            (
-                ImageContent {
-                    image: None,
-                    animation: Some(anim),
-                },
-                w,
-                h,
-            )
-        } else {
-            let img = load_image(path_str).map_err(|e| OpError::new(&e.to_string()))?;
-            (
-                ImageContent {
-                    image: Some(img.clone()),
-                    animation: None,
-                },
-                img.width(),
-                img.height(),
-            )
-        }
-    } else {
-        let img = load_image(path_str).map_err(|e| OpError::new(&e.to_string()))?;
-        (
-            ImageContent {
-                image: Some(img.clone()),
-                animation: None,
-            },
-            img.width(),
-            img.height(),
-        )
-    };
+    // TODO: Implement image window spawning in the new architecture
+    // For now, log the image that would be shown
+    info!("Would show image: {:?}", path);
+    warn!("Image window spawning not yet implemented in new architecture");
 
-    let size = opts
-        .window
-        .size
-        .map(|s| (s.width, s.height))
-        .unwrap_or((width, height));
-
-    let window_opts = crate::gui::window_manager::WindowOptions {
-        size: Some(size),
-        opacity: opts.window.opacity.unwrap_or(1.0),
-        always_on_top: opts.window.always_on_top.unwrap_or(false),
-        click_through: opts.window.click_through.unwrap_or(false),
-        position: opts.window.position.map(|p| (p.x, p.y)),
-        decorations: false,
-        timeout: opts.duration.map(std::time::Duration::from_secs),
-        ..Default::default()
-    };
-
-    let handle = gui_controller
-        .create_window(window_opts)
-        .map_err(|e| OpError::new(&e.to_string()))?;
-
-    gui_controller
-        .set_content(handle, Box::new(content))
-        .map_err(|e| OpError::new(&e.to_string()))?;
-
-    Ok(handle.0.to_string())
+    // Return a placeholder handle
+    Ok(uuid::Uuid::new_v4().to_string())
 }
 
 pub const TS_SOURCE: &str = include_str!("js/image.ts");
