@@ -51,6 +51,12 @@ slint-build = "1.14.1"
 i-slint-backend-winit = "1.14.1"
 tray-icon = "0.21.2"
 muda = "0.17.1"
+ffmpeg-next = "8"
+smol = "2"
+futures = "0.3"
+ringbuf = "0.3"
+cpal = "0.15"
+derive_more = { version = "2", features = ["deref", "deref_mut"] }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 x11rb = "0.13"

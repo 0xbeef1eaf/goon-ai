@@ -91,7 +91,6 @@ impl Orchestrator {
             registry: registry.clone(),
             mood: mood.clone(),
             max_audio_concurrent: self.settings.runtime.popups.audio.max.unwrap_or(1) as usize,
-            max_video_concurrent: self.settings.runtime.popups.video.max.unwrap_or(1) as usize,
         };
 
         let mut runtime = GoonRuntime::new(context);
@@ -218,7 +217,6 @@ impl Orchestrator {
             registry: registry.clone(),
             mood: mood.clone(),
             max_audio_concurrent: self.settings.runtime.popups.audio.max.unwrap_or(1) as usize,
-            max_video_concurrent: self.settings.runtime.popups.video.max.unwrap_or(1) as usize,
         };
 
         let mut runtime = GoonRuntime::new(context);

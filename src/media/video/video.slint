@@ -1,0 +1,60 @@
+import { VerticalBox } from "std-widgets.slint";
+
+export component VideoWindow inherits Window {
+    in property <image> video-frame;
+    in property <bool> playing: true;
+    in property <float> video-opacity: 1.0;
+    in property <int> video-width: 854;
+    in property <int> video-height: 480;
+
+    pure callback toggle-pause-play();
+
+    title: "goon.ai Video";
+    no-frame: true;
+    width: root.video-width * 1px;
+    height: root.video-height * 1px;
+    background: #000000;
+
+    Rectangle {
+        width: 100%;
+        height: 100%;
+        background: black;
+
+        Image {
+            width: 100%;
+            height: 100%;
+            source: root.video-frame;
+            opacity: root.video-opacity;
+            image-fit: contain;
+        }
+
+        // Click to toggle pause/play
+        TouchArea {
+            width: 100%;
+            height: 100%;
+            clicked => {
+                root.toggle-pause-play();
+            }
+        }
+
+        // Pause indicator overlay
+        if !root.playing: Rectangle {
+            width: 80px;
+            height: 80px;
+            x: (parent.width - self.width) / 2;
+            y: (parent.height - self.height) / 2;
+            background: #00000080;
+            border-radius: 40px;
+
+            // Play triangle (paused state shows play icon)
+            Path {
+                width: 40px;
+                height: 40px;
+                x: (parent.width - self.width) / 2 + 5px;
+                y: (parent.height - self.height) / 2;
+                fill: white;
+                commands: "M 0 0 L 40 20 L 0 40 Z";
+            }
+        }
+    }
+}

@@ -214,7 +214,6 @@ async fn run_code(State(state): State<AppState>, Json(req): Json<RunRequest>) ->
                 registry,
                 mood,
                 max_audio_concurrent: 5,
-                max_video_concurrent: 2,
             };
 
             let mut runtime = GoonRuntime::new(context);

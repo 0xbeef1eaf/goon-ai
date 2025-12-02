@@ -35,7 +35,7 @@ pub struct PromptOptions {
     pub duration: Option<f64>,
 }
 
-/// Displays a text prompt in a new window that the user has to copy for it to disappear.
+/// Displays text that the user has to repeat back to you before they can close the window.
 ///
 /// Returns a handle ID that can be used to control the window (move, resize, close).
 ///

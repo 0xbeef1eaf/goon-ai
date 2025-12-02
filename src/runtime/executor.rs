@@ -61,7 +61,6 @@ mod tests {
             registry,
             mood,
             max_audio_concurrent: 10,
-            max_video_concurrent: 3,
         };
 
         let code = r#"
@@ -92,7 +91,6 @@ mod tests {
             registry,
             mood,
             max_audio_concurrent: 10,
-            max_video_concurrent: 3,
         };
 
         let code = "const x: number = ;"; // Invalid syntax

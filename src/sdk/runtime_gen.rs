@@ -414,11 +414,23 @@ pub fn generate_video_runtime() -> String {
         class_name: "video",
         has_handle: true,
         handle_class_name: Some("VideoHandle"),
-        handle_methods: vec![HandleMethodConfig {
-            method_name: "close",
-            op_name: "op_close_window",
-            docs: "Closes the video window and stops playback.",
-        }],
+        handle_methods: vec![
+            HandleMethodConfig {
+                method_name: "close",
+                op_name: "op_close_window",
+                docs: "Closes the video window and stops playback.",
+            },
+            HandleMethodConfig {
+                method_name: "pause",
+                op_name: "op_pause_video",
+                docs: "Pauses video playback. Can be resumed with resume().",
+            },
+            HandleMethodConfig {
+                method_name: "resume",
+                op_name: "op_resume_video",
+                docs: "Resumes paused video playback.",
+            },
+        ],
         primary_op: "op_show_video",
         primary_method: "play",
         primary_returns_value: false,

@@ -3,6 +3,7 @@
 //! Uses channels to communicate between the LLM/eval thread and the Slint UI thread.
 //! Each window handles its own lifecycle and cleanup.
 
+use crate::media::video::player::{self, Player, Rescaler};
 use anyhow::Result;
 use i_slint_backend_winit::WinitWindowAccessor;
 use slint::ComponentHandle;
@@ -11,6 +12,7 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::rc::Rc;
 use std::sync::mpsc::{Receiver, Sender, channel};
+use std::sync::{Arc, Mutex};
 use tracing::{debug, error, info};
 use uuid::Uuid;
 
@@ -41,6 +43,20 @@ pub enum WindowCommand {
         height: Option<u32>,
         opacity: f32,
     },
+    /// Spawn a new video window
+    SpawnVideo {
+        handle: WindowHandle,
+        path: PathBuf,
+        width: Option<u32>,
+        height: Option<u32>,
+        opacity: f32,
+        loop_playback: bool,
+        volume: f32,
+    },
+    /// Pause a video
+    PauseVideo(WindowHandle),
+    /// Resume a video
+    ResumeVideo(WindowHandle),
     /// Close a specific window
     CloseWindow(WindowHandle),
     /// Close all windows
@@ -60,10 +76,17 @@ pub enum WindowResponse {
     Error(String),
 }
 
+/// Video player state
+struct VideoState {
+    window: Rc<VideoWindow>,
+    player: Arc<Mutex<Player>>,
+}
+
 /// Enum to hold different window types
 enum WindowType {
     Prompt(Rc<PromptWindow>),
     Image(Rc<ImageWindow>),
+    Video(VideoState),
 }
 
 impl WindowType {
@@ -71,6 +94,7 @@ impl WindowType {
         match self {
             WindowType::Prompt(w) => w.hide(),
             WindowType::Image(w) => w.hide(),
+            WindowType::Video(state) => state.window.hide(),
         }
     }
 }
@@ -141,6 +165,28 @@ impl WindowSpawner {
                     } else {
                         let _ = self.response_tx.send(WindowResponse::Spawned(handle));
                     }
+                }
+                WindowCommand::SpawnVideo {
+                    handle,
+                    path,
+                    width,
+                    height,
+                    opacity,
+                    loop_playback: _,
+                    volume: _,
+                } => {
+                    if let Err(e) = self.spawn_video_window(handle, &path, width, height, opacity) {
+                        error!("Failed to spawn video window: {}", e);
+                        let _ = self.response_tx.send(WindowResponse::Error(e.to_string()));
+                    } else {
+                        let _ = self.response_tx.send(WindowResponse::Spawned(handle));
+                    }
+                }
+                WindowCommand::PauseVideo(handle) => {
+                    self.pause_video(handle);
+                }
+                WindowCommand::ResumeVideo(handle) => {
+                    self.resume_video(handle);
                 }
                 WindowCommand::CloseWindow(handle) => {
                     self.close_window(handle);
@@ -299,6 +345,130 @@ impl WindowSpawner {
         Ok(())
     }
 
+    /// Spawn a new video window
+    fn spawn_video_window(
+        &self,
+        handle: WindowHandle,
+        path: &std::path::Path,
+        width: Option<u32>,
+        height: Option<u32>,
+        opacity: f32,
+    ) -> Result<()> {
+        let window = VideoWindow::new()?;
+        let window = Rc::new(window);
+
+        // Set initial properties
+        window.set_video_opacity(opacity);
+        if let Some(w) = width {
+            window.set_video_width(w as i32);
+        }
+        if let Some(h) = height {
+            window.set_video_height(h as i32);
+        }
+
+        // RGB rescaler for converting frames
+        let mut to_rgb_rescaler: Option<Rescaler> = None;
+
+        // Create player with frame callback
+        let window_weak = window.as_weak();
+        let player = Player::start(
+            path.to_path_buf(),
+            move |new_frame| {
+                // Rebuild rescaler if format changed
+                let rebuild_rescaler = to_rgb_rescaler.as_ref().is_none_or(|existing_rescaler| {
+                    existing_rescaler.input().format != new_frame.format()
+                });
+
+                if rebuild_rescaler {
+                    to_rgb_rescaler = Some(player::rgb_rescaler_for_frame(new_frame));
+                }
+
+                let rescaler = to_rgb_rescaler.as_mut().unwrap();
+
+                let mut rgb_frame = ffmpeg_next::util::frame::Video::empty();
+                rescaler.run(new_frame, &mut rgb_frame).unwrap();
+
+                let pixel_buffer = player::video_frame_to_pixel_buffer(&rgb_frame);
+                let _ = window_weak.upgrade_in_event_loop(move |window| {
+                    window.set_video_frame(slint::Image::from_rgb8(pixel_buffer));
+                });
+            },
+            {
+                let window_weak = window.as_weak();
+                move |playing| {
+                    let _ = window_weak.upgrade_in_event_loop(move |window| {
+                        window.set_playing(playing);
+                    });
+                }
+            },
+        )
+        .map_err(|e| anyhow::anyhow!("Failed to start video player: {}", e))?;
+
+        let player = Arc::new(Mutex::new(player));
+
+        // Set up toggle callback
+        let player_clone = player.clone();
+        window.on_toggle_pause_play(move || {
+            if let Ok(mut p) = player_clone.lock() {
+                p.toggle_pause_playing();
+            }
+        });
+
+        // Store window and player
+        WINDOWS.with(|windows| {
+            windows.borrow_mut().insert(
+                handle,
+                WindowType::Video(VideoState {
+                    window: window.clone(),
+                    player: player.clone(),
+                }),
+            );
+        });
+
+        // Show window
+        window.show()?;
+
+        // Configure native window properties asynchronously
+        let window_weak = window.as_weak();
+        let _ = slint::spawn_local(async move {
+            if let Some(window) = window_weak.upgrade()
+                && let Ok(winit_window) = window.window().winit_window().await
+            {
+                winit_window.set_window_level(
+                    i_slint_backend_winit::winit::window::WindowLevel::AlwaysOnTop,
+                );
+                winit_window.set_resizable(false);
+                winit_window.set_decorations(false);
+                winit_window.set_window_icon(None);
+            }
+        });
+
+        debug!("Spawned video window: {:?}", handle);
+        Ok(())
+    }
+
+    /// Pause a video by handle
+    fn pause_video(&self, handle: WindowHandle) {
+        WINDOWS.with(|windows| {
+            if let Some(WindowType::Video(state)) = windows.borrow().get(&handle)
+                && let Ok(mut player) = state.player.lock()
+            {
+                player.pause();
+            }
+        });
+    }
+
+    /// Resume a video by handle
+    fn resume_video(&self, handle: WindowHandle) {
+        WINDOWS.with(|windows| {
+            if let Some(WindowType::Video(state)) = windows.borrow().get(&handle)
+                && let Ok(mut player) = state.player.lock()
+            {
+                player.resume();
+            }
+        });
+    }
+
     /// Close a specific window
     fn close_window(&self, handle: WindowHandle) {
         WINDOWS.with(|windows| {
@@ -371,6 +541,45 @@ impl WindowSpawnerHandle {
             })
             .map_err(|e| anyhow::anyhow!("Failed to send spawn image command: {}", e))?;
         Ok(handle)
+    }
+
+    /// Spawn a new video window
+    pub fn spawn_video(
+        &self,
+        path: PathBuf,
+        width: Option<u32>,
+        height: Option<u32>,
+        opacity: f32,
+        loop_playback: bool,
+        volume: f32,
+    ) -> Result<WindowHandle> {
+        let handle = WindowHandle(Uuid::new_v4());
+        self.command_tx
+            .send(WindowCommand::SpawnVideo {
+                handle,
+                path,
+                width,
+                height,
+                opacity,
+                loop_playback,
+                volume,
+            })
+            .map_err(|e| anyhow::anyhow!("Failed to send spawn video command: {}", e))?;
+        Ok(handle)
+    }
+
+    /// Pause a video
+    pub fn pause_video(&self, handle: WindowHandle) -> Result<()> {
+        self.command_tx
+            .send(WindowCommand::PauseVideo(handle))
+            .map_err(|e| anyhow::anyhow!("Failed to send pause video command: {}", e))
+    }
+
+    /// Resume a video
+    pub fn resume_video(&self, handle: WindowHandle) -> Result<()> {
+        self.command_tx
+            .send(WindowCommand::ResumeVideo(handle))
+            .map_err(|e| anyhow::anyhow!("Failed to send resume video command: {}", e))
     }
 
     /// Close a specific window

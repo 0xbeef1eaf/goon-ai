@@ -44,7 +44,6 @@ async fn test_full_permission_flow() {
         registry: registry.clone(),
         mood: mood.clone(),
         max_audio_concurrent: 10,
-        max_video_concurrent: 3,
     };
 
     let mut runtime = GoonRuntime::new(context);
@@ -81,7 +80,6 @@ async fn test_full_permission_flow() {
         registry: registry.clone(),
         mood: mood.clone(),
         max_audio_concurrent: 10,
-        max_video_concurrent: 3,
     };
 
     let mut runtime2 = GoonRuntime::new(context2);

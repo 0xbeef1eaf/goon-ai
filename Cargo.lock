@@ -2905,6 +2905,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "ffmpeg-next"
+version = "8.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d658424d233cbd993a972dd73a66ca733acd12a494c68995c9ac32ae1fe65b40"
+dependencies = [
+ "bitflags 2.10.0",
+ "ffmpeg-sys-next",
+ "libc",
+]
+
+[[package]]
+name = "ffmpeg-sys-next"
+version = "8.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9bca20aa4ee774fe384c2490096c122b0b23cf524a9910add0686691003d797b"
+dependencies = [
+ "bindgen",
+ "cc",
+ "libc",
+ "num_cpus",
+ "pkg-config",
+ "vcpkg",
+]
+
+[[package]]
 name = "field-offset"
 version = "0.3.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3732,12 +3757,16 @@ dependencies = [
  "axum",
  "bytemuck",
  "clap",
+ "cpal",
  "deno_core",
  "deno_error",
+ "derive_more",
  "dirs",
  "eframe",
  "egui",
+ "ffmpeg-next",
  "flate2",
+ "futures",
  "glyph_brush",
  "glyphon",
  "gtk",
@@ -3754,6 +3783,7 @@ dependencies = [
  "raw-window-handle 0.6.2",
  "reqwest",
  "rfd",
+ "ringbuf",
  "rodio",
  "serde",
  "serde_json",
@@ -3761,6 +3791,7 @@ dependencies = [
  "sevenz-rust",
  "slint",
  "slint-build",
+ "smol",
  "swc",
  "swc_common",
  "swc_ecma_ast",
@@ -7370,6 +7401,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "ringbuf"
+version = "0.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "79abed428d1fd2a128201cec72c5f6938e2da607c6f3745f769fabea399d950a"
+dependencies = [
+ "crossbeam-utils",
+]
+
+[[package]]
 name = "rodio"
 version = "0.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -8113,6 +8153,23 @@ dependencies = [
  "libc",
  "smithay-client-toolkit 0.20.0",
  "wayland-backend",
+]
+
+[[package]]
+name = "smol"
+version = "2.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a33bd3e260892199c3ccfc487c88b2da2265080acb316cd920da72fdfd7c599f"
+dependencies = [
+ "async-channel",
+ "async-executor",
+ "async-fs 2.2.0",
+ "async-io 2.6.0",
+ "async-lock 3.4.1",
+ "async-net",
+ "async-process 2.5.0",
+ "blocking",
+ "futures-lite 2.6.1",
 ]
 
 [[package]]

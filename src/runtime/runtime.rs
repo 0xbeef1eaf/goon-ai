@@ -2,7 +2,6 @@ use crate::assets::registry::AssetRegistry;
 use crate::config::pack::Mood;
 use crate::gui::WindowSpawnerHandle;
 use crate::media::audio::manager::AudioManager;
-use crate::media::video::manager::VideoManager;
 use crate::permissions::PermissionChecker;
 use crate::sdk;
 use crate::sdk::{
@@ -11,7 +10,7 @@ use crate::sdk::{
 };
 use crate::typescript::TypeScriptCompiler;
 use anyhow::Result;
-use deno_core::{JsRuntime, ModuleSpecifier, RuntimeOptions};
+use deno_core::{JsRuntime, RuntimeOptions};
 use rodio::OutputStream;
 use std::sync::{Arc, Mutex};
 
@@ -21,7 +20,6 @@ pub struct RuntimeContext {
     pub registry: Arc<AssetRegistry>,
     pub mood: Mood,
     pub max_audio_concurrent: usize,
-    pub max_video_concurrent: usize,
 }
 
 pub struct GoonRuntime {
@@ -70,11 +68,6 @@ impl GoonRuntime {
                 )));
                 op_state.put(audio_manager);
             }
-
-            let video_manager = Arc::new(tokio::sync::Mutex::new(VideoManager::new(
-                context.max_video_concurrent,
-            )));
-            op_state.put(video_manager);
         }
 
         // Compile and load SDK bridge code
@@ -151,7 +144,6 @@ mod tests {
             registry,
             mood,
             max_audio_concurrent: 10,
-            max_video_concurrent: 3,
         };
         (context, window_spawner)
     }
@@ -214,7 +206,6 @@ mod tests {
             registry,
             mood,
             max_audio_concurrent: 10,
-            max_video_concurrent: 3,
         };
         let mut runtime = GoonRuntime::new(context);
 
@@ -248,7 +239,6 @@ mod tests {
             registry,
             mood,
             max_audio_concurrent: 10,
-            max_video_concurrent: 3,
         };
         let mut runtime = GoonRuntime::new(context);
 
