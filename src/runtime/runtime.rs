@@ -5,8 +5,9 @@ use crate::media::audio::manager::AudioManager;
 use crate::permissions::PermissionChecker;
 use crate::sdk;
 use crate::sdk::{
-    audio::goon_audio, hypno::goon_hypno, image::goon_image, pack::goon_pack, prompt::goon_prompt,
-    system::goon_system, video::goon_video, wallpaper::goon_wallpaper, website::goon_website,
+    audio::goon_audio, hypno::goon_hypno, image::goon_image, pack::goon_pack, system::goon_system,
+    video::goon_video, wallpaper::goon_wallpaper, website::goon_website,
+    write_lines::goon_write_lines,
 };
 use crate::typescript::TypeScriptCompiler;
 use anyhow::Result;
@@ -46,7 +47,7 @@ impl GoonRuntime {
                 goon_audio::init(),
                 goon_hypno::init(),
                 goon_wallpaper::init(),
-                goon_prompt::init(),
+                goon_write_lines::init(),
                 goon_website::init(),
             ],
             ..Default::default()
@@ -154,9 +155,8 @@ mod tests {
         let mut runtime = GoonRuntime::new(context);
 
         let code = r#"
-            goon.system.log("Hello from JS");
-            // const handle = await goon.image.show({ tags: ["test"] }); // This would fail without real window manager
-            // goon.system.log("Image handle: " + handle);
+            goon.pack.getCurrentMood();
+            // await goon.image.show({ tags: ["test"], duration: 1000 });
         "#;
 
         let result = runtime.execute_script(code).await;

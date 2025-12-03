@@ -3,6 +3,7 @@ use crate::assets::selector::AssetSelector;
 use crate::assets::types::Asset;
 use crate::config::pack::Mood;
 use crate::media::wallpaper::{PlatformWallpaperSetter, WallpaperSetter};
+use crate::permissions::Permission;
 use crate::runtime::error::OpError;
 use crate::runtime::utils::check_permission;
 use deno_core::OpState;
@@ -33,7 +34,7 @@ pub async fn op_set_wallpaper(
 ) -> Result<(), OpError> {
     let (registry, mood) = {
         let mut state = state.borrow_mut();
-        check_permission(&mut state, "wallpaper")?;
+        check_permission(&mut state, Permission::Wallpaper)?;
         let registry = state.borrow::<Arc<AssetRegistry>>().clone();
         let mood = state.borrow::<Mood>().clone();
         (registry, mood)

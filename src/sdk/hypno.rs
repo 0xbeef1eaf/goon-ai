@@ -2,6 +2,7 @@ use crate::assets::registry::AssetRegistry;
 use crate::assets::selector::AssetSelector;
 use crate::assets::types::Asset;
 use crate::config::pack::Mood;
+use crate::permissions::Permission;
 use crate::runtime::error::OpError;
 use crate::runtime::utils::check_permission;
 use crate::sdk::types::WindowOptions;
@@ -40,7 +41,7 @@ pub async fn op_show_hypno(
 ) -> Result<u32, OpError> {
     let (registry, mood) = {
         let mut state = state.borrow_mut();
-        check_permission(&mut state, "hypno")?;
+        check_permission(&mut state, Permission::Hypno)?;
         let registry = state.borrow::<Arc<AssetRegistry>>().clone();
         let mood = state.borrow::<Mood>().clone();
         (registry, mood)

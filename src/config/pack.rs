@@ -58,25 +58,24 @@ pub struct Asset {
 
 impl PackConfig {
     pub fn load(pack_name: &str) -> Result<Self> {
-        let path = Path::new("packs").join(pack_name).join("config.yaml");
+        let path = Path::new("packs").join(pack_name).join("config.toml");
         let content = fs::read_to_string(&path)
             .with_context(|| format!("Failed to read pack config at {:?}", path))?;
 
-        let config: PackConfig = serde_yaml::from_str(&content)
+        let config: PackConfig = toml::from_str(&content)
             .with_context(|| format!("Failed to parse pack config for {}", pack_name))?;
         Ok(config)
     }
 
     #[allow(dead_code)]
     pub fn parse(content: &str) -> Result<Self> {
-        let config: PackConfig =
-            serde_yaml::from_str(content).context("Failed to parse pack config")?;
+        let config: PackConfig = toml::from_str(content).context("Failed to parse pack config")?;
         Ok(config)
     }
 
     pub fn save(&self, pack_name: &str) -> Result<()> {
-        let path = Path::new("packs").join(pack_name).join("config.yaml");
-        let content = serde_yaml::to_string(self).context("Failed to serialize pack config")?;
+        let path = Path::new("packs").join(pack_name).join("config.toml");
+        let content = toml::to_string(self).context("Failed to serialize pack config")?;
         fs::write(&path, content)
             .with_context(|| format!("Failed to write pack config to {:?}", path))?;
         Ok(())
@@ -119,24 +118,20 @@ mod tests {
 
     #[test]
     fn test_parse_pack_config() {
-        let yaml = r#"
-meta:
-  name: Test Pack
-  version: 1.0.0
-  permissions:
-    - image
-moods:
-  - name: default
-    description: Default mood
-    tags:
-      - test
-assets:
-  image:
-    - path: image/test.jpg
-      tags:
-        - test
+        let toml = r#"
+[meta]
+        name = "Test Pack"
+        version = "1.0.0"
+        permissions = ["image"]
+[[moods]]
+        name = "default"
+        description = "Default mood"
+        tags = ["test"]
+[[assets.image]]
+        path = "image/test.jpg"
+        tags = ["test"]
 "#;
-        let config = PackConfig::parse(yaml).unwrap();
+        let config = PackConfig::parse(toml).unwrap();
         assert_eq!(config.meta.name, "Test Pack");
         assert_eq!(config.moods[0].name, "default");
         assert_eq!(

@@ -1,0 +1,36 @@
+[user]
+name = "Joe Bloggs"
+dob = 1990-01-01
+gender = "male"
+
+[llmSettings]
+host = "http://localhost:11434"
+
+[runtime]
+permissions = ["image", "video", "audio", "writeLines", "wallpaper", "website"]
+
+[runtime.popups.image]
+enabled = true
+timeout = 10
+max = 5
+
+[runtime.popups.image.mitosis]
+enabled = false
+factor = 2
+
+[runtime.popups.video]
+enabled = true
+timeout = 15
+max = 3
+
+[runtime.popups.audio]
+enabled = true
+timeout = 5
+max = 1
+
+[runtime.popups.wallpaper]
+enabled = true
+
+[runtime.pack]
+current = "Test Pack"
+mood = "default"

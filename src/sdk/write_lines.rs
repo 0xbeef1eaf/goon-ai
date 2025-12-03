@@ -1,4 +1,5 @@
 use crate::gui::WindowSpawnerHandle;
+use crate::permissions::Permission;
 use crate::runtime::error::OpError;
 use crate::runtime::utils::check_permission;
 use crate::sdk::types::WindowOptions;
@@ -14,7 +15,7 @@ use ts_rs::TS;
 #[derive(Deserialize, Debug, Default, TS)]
 #[serde(rename_all = "camelCase")]
 /// Options for displaying a text prompt
-pub struct PromptOptions {
+pub struct WriteLinesOptions {
     /// The text content to display in the prompt
     pub text: String,
     /// Font size in pixels
@@ -36,6 +37,8 @@ pub struct PromptOptions {
 }
 
 /// Displays text that the user has to repeat back to you before they can close the window.
+/// This works in a "Write lines for me" approach, where you provide the lines for the user to type back.
+/// The prompt window will stay on top until the user types the exact text you provided.
 ///
 /// Returns a handle ID that can be used to control the window (move, resize, close).
 ///
@@ -44,26 +47,26 @@ pub struct PromptOptions {
 /// @returns A unique handle ID string for controlling this prompt window.
 #[op2(async)]
 #[string]
-pub async fn op_show_prompt(
+pub async fn op_show_write_lines(
     state: Rc<RefCell<OpState>>,
     #[serde] options: Option<serde_json::Value>,
 ) -> Result<String, OpError> {
-    info!("op_show_prompt called");
+    info!("op_show_write_lines called");
     let window_spawner = {
         let mut state = state.borrow_mut();
-        check_permission(&mut state, "prompt")?;
+        check_permission(&mut state, Permission::WriteLines)?;
         state.borrow::<WindowSpawnerHandle>().clone()
     };
 
-    let opts: PromptOptions = if let Some(o) = options {
-        debug!("op_show_prompt options: {:?}", o);
+    let opts: WriteLinesOptions = if let Some(o) = options {
+        debug!("op_show_write_lines options: {:?}", o);
         serde_json::from_value(o).map_err(|e| {
-            error!("Failed to parse prompt options: {}", e);
+            error!("Failed to parse write_lines options: {}", e);
             OpError::new(&e.to_string())
         })?
     } else {
-        error!("Prompt options missing");
-        return Err(OpError::new("Prompt options required"));
+        error!("WriteLines options missing");
+        return Err(OpError::new("WriteLines options required"));
     };
 
     let alignment = opts.alignment.unwrap_or_else(|| "left".to_string());
@@ -71,9 +74,9 @@ pub async fn op_show_prompt(
     let text_color = opts.color.unwrap_or([1.0, 1.0, 1.0, 1.0]);
     let background_color = opts.background.unwrap_or([0.1, 0.1, 0.1, 0.95]);
 
-    info!("Spawning prompt window via channel");
+    info!("Spawning write_lines window via channel");
     let handle = window_spawner
-        .spawn_prompt(
+        .spawn_write_lines(
             opts.text,
             font_size,
             text_color,
@@ -81,12 +84,12 @@ pub async fn op_show_prompt(
             alignment,
         )
         .map_err(|e| {
-            error!("Failed to spawn prompt window: {}", e);
+            error!("Failed to spawn write_lines window: {}", e);
             OpError::new(&e.to_string())
         })?;
 
-    info!("Prompt window spawned successfully: {:?}", handle);
+    info!("WriteLines window spawned successfully: {:?}", handle);
     Ok(handle.0.to_string())
 }
 
-deno_core::extension!(goon_prompt, ops = [op_show_prompt],);
+deno_core::extension!(goon_write_lines, ops = [op_show_write_lines],);

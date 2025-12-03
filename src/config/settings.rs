@@ -42,12 +42,10 @@ pub struct Popups {
     pub image: PopupConfig,
     pub video: PopupConfig,
     pub audio: PopupConfig,
-    pub wallpaper: WallpaperConfig,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct PopupConfig {
-    pub enabled: bool,
     pub timeout: Option<u64>,
     pub max: Option<u32>,
     pub mitosis: Option<MitosisConfig>,
@@ -60,11 +58,6 @@ pub struct MitosisConfig {
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct WallpaperConfig {
-    pub enabled: bool,
-}
-
-#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct PackSettings {
     pub current: String,
     pub mood: String,
@@ -72,34 +65,34 @@ pub struct PackSettings {
 
 impl Settings {
     pub fn load() -> Result<Self> {
-        let path = Path::new("settings.yaml");
+        let path = Path::new("settings.toml");
         let content = if path.exists() {
-            fs::read_to_string(path).context("Failed to read settings.yaml")?
+            fs::read_to_string(path).context("Failed to read settings.toml")?
         } else {
-            let example_path = Path::new("settings.example.yaml");
+            let example_path = Path::new("settings.example.toml");
             if example_path.exists() {
-                println!("settings.yaml not found, using settings.example.yaml");
-                fs::read_to_string(example_path).context("Failed to read settings.example.yaml")?
+                println!("settings.toml not found, using settings.example.toml");
+                fs::read_to_string(example_path).context("Failed to read settings.example.toml")?
             } else {
-                anyhow::bail!("Neither settings.yaml nor settings.example.yaml found");
+                anyhow::bail!("Neither settings.toml nor settings.example.toml found");
             }
         };
 
         let settings: Settings =
-            serde_yaml::from_str(&content).context("Failed to parse settings")?;
+            toml::from_str(&content).context(format!("Failed to parse settings: {}", content))?;
         Ok(settings)
     }
 
     #[allow(dead_code)]
     pub fn parse(content: &str) -> Result<Self> {
         let settings: Settings =
-            serde_yaml::from_str(content).context("Failed to parse settings")?;
+            toml::from_str(content).context(format!("Failed to parse settings: {}", content))?;
         Ok(settings)
     }
 
     pub fn save(&self) -> Result<()> {
-        let content = serde_yaml::to_string(self).context("Failed to serialize settings")?;
-        fs::write("settings.yaml", content).context("Failed to write settings.yaml")?;
+        let content = toml::to_string(self).context("Failed to serialize settings")?;
+        fs::write("settings.toml", content).context("Failed to write settings.toml")?;
         Ok(())
     }
 }
@@ -110,39 +103,37 @@ mod tests {
 
     #[test]
     fn test_parse_settings() {
-        let yaml = r#"
-user:
-  name: Test User
-  dob: 1990-01-01
-  gender: male
-llmSettings:
-  host: "http://localhost:11434"
-runtime:
-  popups:
-    image:
-      enabled: true
-      timeout: 10
-      max: 5
-      mitosis:
-        enabled: false
-        factor: 2
-    video:
-      enabled: true
-      timeout: 15
-      max: 3
-    audio:
-      enabled: true
-      timeout: 5
-      max: 1
-    wallpaper:
-      enabled: true
-  permissions:
-    - image
-  pack:
-    current: Test Pack
-    mood: default
+        let toml = r#"
+[user]
+name = "Test User"
+dob = "1990-01-01"
+gender = "male"
+
+[llmSettings]
+host = "http://localhost:11434"
+
+[runtime.popups.image]
+max = 5
+
+[runtime.popups.image.mitosis]
+enabled = false
+factor = 2
+
+[runtime.popups.video]
+max = 3
+
+[runtime.popups.audio]
+timeout = 5
+max = 1
+
+[runtime]
+permissions = ["image"]
+
+[runtime.pack]
+current = "Test Pack"
+mood = "default"
 "#;
-        let settings = Settings::parse(yaml).unwrap();
+        let settings = Settings::parse(toml).unwrap();
         assert_eq!(settings.user.name, "Test User");
         assert_eq!(settings.runtime.pack.current, "Test Pack");
         assert_eq!(settings.runtime.permissions, vec![Permission::Image]);

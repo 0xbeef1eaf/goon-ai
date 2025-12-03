@@ -1,6 +1,6 @@
 import { LineEdit, VerticalBox } from "std-widgets.slint";
 
-export component PromptWindow inherits Window {
+export component WriteLinesWindow inherits Window {
     in property <string> prompt-text;
     in property <color> text-color;
     in property <color> background-color;
@@ -11,7 +11,7 @@ export component PromptWindow inherits Window {
 
     callback input-submitted(string);
 
-    title: "goon.ai Prompt";
+    title: "goon.ai WriteLines";
     no-frame: true;
     width: 420px;
     height: 420px;

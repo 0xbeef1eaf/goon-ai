@@ -3,6 +3,7 @@ use crate::assets::selector::AssetSelector;
 use crate::assets::types::Asset;
 use crate::config::pack::Mood;
 use crate::gui::WindowSpawnerHandle;
+use crate::permissions::Permission;
 use crate::runtime::error::OpError;
 use crate::runtime::utils::check_permission;
 use crate::sdk::types::WindowOptions;
@@ -54,7 +55,7 @@ pub async fn op_show_video(
 ) -> Result<String, OpError> {
     let (registry, mood, window_spawner) = {
         let mut state = state.borrow_mut();
-        check_permission(&mut state, "video")?;
+        check_permission(&mut state, Permission::Video)?;
         let registry = state.borrow::<Arc<AssetRegistry>>().clone();
         let mood = state.borrow::<Mood>().clone();
         let window_spawner = state.borrow::<WindowSpawnerHandle>().clone();
@@ -106,7 +107,7 @@ pub async fn op_pause_video(
     let handle = parse_video_handle(&handle_id)?;
     let window_spawner = {
         let mut state = state.borrow_mut();
-        check_permission(&mut state, "video")?;
+        check_permission(&mut state, Permission::Video)?;
         state.borrow::<WindowSpawnerHandle>().clone()
     };
 
@@ -128,7 +129,7 @@ pub async fn op_resume_video(
     let handle = parse_video_handle(&handle_id)?;
     let window_spawner = {
         let mut state = state.borrow_mut();
-        check_permission(&mut state, "video")?;
+        check_permission(&mut state, Permission::Video)?;
         state.borrow::<WindowSpawnerHandle>().clone()
     };
 

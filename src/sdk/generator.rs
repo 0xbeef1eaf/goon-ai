@@ -30,7 +30,10 @@ fn op_name_to_ts_method(op_name: &str) -> String {
     result
 }
 
+use tracing::info;
+
 pub fn generate_definitions(allowed_modules: &[String]) -> String {
+    info!("Generator received allowed_modules: {:?}", allowed_modules);
     let all_modules = metadata::get_modules();
     let mut definitions = String::new();
 
@@ -39,10 +42,7 @@ pub fn generate_definitions(allowed_modules: &[String]) -> String {
     for module in &all_modules {
         let include = match module.permission {
             None => true, // Always include
-            Some(perm) => {
-                allowed_modules.contains(&perm.to_string())
-                    || allowed_modules.contains(&"all".to_string())
-            }
+            Some(perm) => allowed_modules.iter().any(|m| m == perm || m == "all"),
         };
 
         if include {
@@ -228,10 +228,7 @@ pub fn generate_definitions(allowed_modules: &[String]) -> String {
     for module in all_modules {
         let include = match module.permission {
             None => true,
-            Some(perm) => {
-                allowed_modules.contains(&perm.to_string())
-                    || allowed_modules.contains(&"all".to_string())
-            }
+            Some(perm) => allowed_modules.iter().any(|m| m == perm || m == "all"),
         };
 
         if include {

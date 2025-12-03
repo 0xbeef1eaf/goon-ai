@@ -1,4 +1,4 @@
-use crate::sdk::{audio, hypno, image, prompt, runtime_gen, types, video, wallpaper, website};
+use crate::sdk::{audio, hypno, image, runtime_gen, types, video, wallpaper, website, write_lines};
 use ts_rs::TS;
 
 fn extract_definitions(source: &str) -> String {
@@ -62,9 +62,9 @@ pub fn audio_ts() -> String {
     format!("{}\n{}", options_interface, source)
 }
 
-pub fn prompt_ts() -> String {
-    let options_interface = prompt::PromptOptions::decl();
-    let source = extract_definitions(&runtime_gen::generate_prompt_runtime());
+pub fn write_lines_ts() -> String {
+    let options_interface = write_lines::WriteLinesOptions::decl();
+    let source = extract_definitions(&runtime_gen::generate_write_lines_runtime());
     format!("{}\n{}", options_interface, source)
 }
 

@@ -3,6 +3,7 @@ pub mod assets;
 pub mod config;
 pub mod core;
 pub mod gui;
+// GUI module includes window management
 pub mod llm;
 pub mod media;
 pub mod permissions;

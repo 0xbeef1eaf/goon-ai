@@ -9,7 +9,6 @@ use crate::llm::prompt::PromptBuilder;
 use crate::permissions::PermissionChecker;
 use crate::runtime::runtime::{GoonRuntime, RuntimeContext};
 use crate::typescript::compiler::TypeScriptCompiler;
-use crate::typescript::sdk_generator::SdkGenerator;
 use anyhow::Result;
 use std::sync::Arc;
 use std::time::Duration;
@@ -57,18 +56,7 @@ impl Orchestrator {
         let compiler = TypeScriptCompiler::new();
 
         // Generate SDK definitions (asset-free)
-        // TODO: Filter modules based on permissions
-        let allowed_modules = vec![
-            "system".to_string(),
-            "image".to_string(),
-            "video".to_string(),
-            "audio".to_string(),
-            "hypno".to_string(),
-            "wallpaper".to_string(),
-            "prompt".to_string(),
-            "website".to_string(),
-        ];
-        let sdk_defs = SdkGenerator::generate_definitions(&allowed_modules);
+        let sdk_defs = crate::sdk::generate_definitions_for_permissions(&self.permissions);
 
         // Initialize Runtime
         let mood_name = &self.settings.runtime.pack.mood;
@@ -107,14 +95,14 @@ impl Orchestrator {
                 self.state.reset_retry();
             }
 
-            let include_history = self.state.retry_count > 0;
+            let execution_failed = self.state.retry_count > 0;
             let messages = PromptBuilder::build(
                 &self.pack_config,
                 &mood.name,
                 &self.settings.user,
                 &history,
                 &sdk_defs,
-                include_history,
+                execution_failed,
             );
 
             // 2. Call LLM
@@ -184,17 +172,7 @@ impl Orchestrator {
         let compiler = TypeScriptCompiler::new();
 
         // Generate SDK definitions (asset-free)
-        let allowed_modules = vec![
-            "system".to_string(),
-            "image".to_string(),
-            "video".to_string(),
-            "audio".to_string(),
-            "hypno".to_string(),
-            "wallpaper".to_string(),
-            "prompt".to_string(),
-            "website".to_string(),
-        ];
-        let _sdk_defs = SdkGenerator::generate_definitions(&allowed_modules);
+        let _sdk_defs = crate::sdk::generate_definitions_for_permissions(&self.permissions);
 
         // Get mood
         let mood_name = &self.settings.runtime.pack.mood;

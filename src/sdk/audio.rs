@@ -3,6 +3,7 @@ use crate::assets::selector::AssetSelector;
 use crate::assets::types::Asset;
 use crate::config::pack::Mood;
 use crate::media::audio::manager::{AudioHandle, AudioManager};
+use crate::permissions::Permission;
 use crate::runtime::error::OpError;
 use crate::runtime::utils::check_permission;
 use deno_core::OpState;
@@ -43,7 +44,7 @@ pub async fn op_play_audio(
 ) -> Result<String, OpError> {
     let (registry, mood, audio_manager) = {
         let mut state = state.borrow_mut();
-        check_permission(&mut state, "audio")?;
+        check_permission(&mut state, Permission::Audio)?;
         let registry = state.borrow::<Arc<AssetRegistry>>().clone();
         let mood = state.borrow::<Mood>().clone();
         let audio_manager = state.try_borrow::<Arc<Mutex<AudioManager>>>().cloned();
@@ -99,7 +100,7 @@ pub async fn op_stop_audio(
     let handle = parse_audio_handle(&handle_id)?;
     let audio_manager = {
         let mut state = state.borrow_mut();
-        check_permission(&mut state, "audio")?;
+        check_permission(&mut state, Permission::Audio)?;
         state.try_borrow::<Arc<Mutex<AudioManager>>>().cloned()
     };
 
@@ -125,7 +126,7 @@ pub async fn op_pause_audio(
     let handle = parse_audio_handle(&handle_id)?;
     let audio_manager = {
         let mut state = state.borrow_mut();
-        check_permission(&mut state, "audio")?;
+        check_permission(&mut state, Permission::Audio)?;
         state.try_borrow::<Arc<Mutex<AudioManager>>>().cloned()
     };
 
@@ -149,7 +150,7 @@ pub async fn op_resume_audio(
     let handle = parse_audio_handle(&handle_id)?;
     let audio_manager = {
         let mut state = state.borrow_mut();
-        check_permission(&mut state, "audio")?;
+        check_permission(&mut state, Permission::Audio)?;
         state.try_borrow::<Arc<Mutex<AudioManager>>>().cloned()
     };
 
@@ -175,7 +176,7 @@ pub async fn op_set_audio_volume(
     let handle = parse_audio_handle(&handle_id)?;
     let audio_manager = {
         let mut state = state.borrow_mut();
-        check_permission(&mut state, "audio")?;
+        check_permission(&mut state, Permission::Audio)?;
         state.try_borrow::<Arc<Mutex<AudioManager>>>().cloned()
     };
 

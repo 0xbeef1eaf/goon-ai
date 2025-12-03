@@ -485,35 +485,15 @@ pub fn generate_system_runtime() -> String {
         primary_method: "",
         primary_returns_value: false,
         options_type: None,
-        extra_methods: vec![
-            MethodConfig {
-                op_name: "op_get_asset",
-                method_name: "getAsset",
-                param_name: Some("tag"),
-                param_type: Some("string"),
-                is_sync: false,
-                returns_value: true,
-                return_type: Some("string"),
-            },
-            MethodConfig {
-                op_name: "op_close_window",
-                method_name: "closeWindow",
-                param_name: Some("handleId"),
-                param_type: Some("string"),
-                is_sync: false,
-                returns_value: false,
-                return_type: None,
-            },
-            MethodConfig {
-                op_name: "op_log",
-                method_name: "log",
-                param_name: Some("message"),
-                param_type: Some("string"),
-                is_sync: true,
-                returns_value: false,
-                return_type: None,
-            },
-        ],
+        extra_methods: vec![MethodConfig {
+            op_name: "op_close_window",
+            method_name: "closeWindow",
+            param_name: Some("handleId"),
+            param_type: Some("string"),
+            is_sync: false,
+            returns_value: false,
+            return_type: None,
+        }],
         source_path: "src/sdk/system.rs",
     })
 }
@@ -543,24 +523,24 @@ pub fn generate_pack_runtime() -> String {
     })
 }
 
-/// Generate the prompt module runtime
-pub fn generate_prompt_runtime() -> String {
+/// Generate the writeLines module runtime
+pub fn generate_write_lines_runtime() -> String {
     generate_module_runtime(&ModuleConfig {
-        name: "prompt",
-        class_name: "textPrompt",
+        name: "writeLines",
+        class_name: "writeLines",
         has_handle: true,
-        handle_class_name: Some("PromptHandle"),
+        handle_class_name: Some("WriteLinesHandle"),
         handle_methods: vec![HandleMethodConfig {
             method_name: "close",
             op_name: "op_close_window",
             docs: "Closes the prompt window.",
         }],
-        primary_op: "op_show_prompt",
+        primary_op: "op_show_write_lines",
         primary_method: "show",
         primary_returns_value: false,
-        options_type: Some("PromptOptions"),
+        options_type: Some("WriteLinesOptions"),
         extra_methods: vec![],
-        source_path: "src/sdk/prompt.rs",
+        source_path: "src/sdk/write_lines.rs",
     })
 }
 
@@ -674,8 +654,7 @@ mod tests {
     fn test_generate_system_runtime() {
         let output = generate_system_runtime();
         assert!(output.contains("class system"));
-        assert!(output.contains("static async getAsset"));
-        assert!(output.contains("static log"));
+        assert!(output.contains("static async closeWindow"));
     }
 
     #[test]

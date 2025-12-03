@@ -1,6 +1,7 @@
 use crate::config::pack::PackConfig;
 use crate::config::settings::User;
 use crate::llm::conversation::ConversationManager;
+use chrono::Datelike;
 use ollama_rs::generation::chat::{ChatMessage, MessageRole};
 
 #[allow(dead_code)]
@@ -14,7 +15,7 @@ impl PromptBuilder {
         user: &User,
         history: &ConversationManager,
         sdk_defs: &str,
-        include_history: bool,
+        execution_failed: bool,
     ) -> Vec<ChatMessage> {
         let mut messages = Vec::new();
         let mut system_content = String::new();
@@ -79,29 +80,28 @@ impl PromptBuilder {
         system_content.push_str(sdk_defs);
         system_content.push_str("\n```\n\n");
 
-        // 3.1 Available Websites (if any)
-        if let Some(websites) = pack_config.websites.as_ref().filter(|w| !w.is_empty()) {
-            system_content.push_str("# Available Websites\n");
-            for site in websites {
-                system_content.push_str(&format!(
-                    "- **{}**: {} (Tags: {})\n",
-                    site.name,
-                    site.description,
-                    site.tags.join(", ")
-                ));
-            }
-            system_content.push('\n');
-        }
-
         // 4. User Profile
         system_content.push_str("# User Profile\n");
         system_content.push_str(&format!("Name: {}\n", user.name));
         system_content.push_str(&format!("Gender: {}\n\n", user.gender));
 
+        // Add in age if DOB is valid
+        if let Ok(dob) = chrono::NaiveDate::parse_from_str(&user.dob, "%Y-%m-%d") {
+            let today = chrono::Utc::now().naive_utc().date();
+            let age = today.year()
+                - dob.year()
+                - if today.ordinal() < dob.ordinal() {
+                    1
+                } else {
+                    0
+                };
+            system_content.push_str(&format!("Age: {}\n\n", age));
+        }
+
         // 5. Task
         system_content.push_str("# Your Task\n");
         system_content.push_str(
-            "Generate TypeScript code using the SDK functions above to interact with the user.\n",
+            "Generate TypeScript code using the SDK functions above to interact with the user, you must execute the code\n",
         );
         system_content
             .push_str("Output ONLY a single TypeScript code wrapped in a ```typescript``` block, previous defintions will not be evaluated.\n");
@@ -109,8 +109,8 @@ impl PromptBuilder {
 
         messages.push(ChatMessage::new(MessageRole::System, system_content));
 
-        // 6. History
-        if include_history {
+        // 6. History - Only include if execution failed
+        if execution_failed {
             for msg in history.get_history() {
                 let role = match msg.role.as_str() {
                     "user" => MessageRole::User,
@@ -163,39 +163,6 @@ mod tests {
             dob: "1990-01-01".to_string(),
             gender: "Non-binary".to_string(),
         }
-    }
-
-    #[test]
-    fn test_prompt_builder_with_websites() {
-        use crate::config::pack::WebsiteConfig;
-
-        let mut pack_config = create_dummy_pack_config();
-        pack_config.websites = Some(vec![WebsiteConfig {
-            name: "TestSite".to_string(),
-            url: "https://example.com".to_string(),
-            description: "A test website".to_string(),
-            tags: vec!["test".to_string()],
-        }]);
-
-        let user = create_dummy_user();
-        let history = ConversationManager::new(10);
-
-        let messages = PromptBuilder::build(
-            &pack_config,
-            "Happy",
-            &user,
-            &history,
-            "class image {}",
-            true,
-        );
-        let system_msg = &messages[0];
-
-        assert!(system_msg.content.contains("# Available Websites"));
-        assert!(
-            system_msg
-                .content
-                .contains("- **TestSite**: A test website (Tags: test)")
-        );
     }
 
     #[test]

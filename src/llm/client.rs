@@ -4,6 +4,7 @@ use ollama_rs::{
     Ollama,
     generation::chat::{ChatMessage, request::ChatMessageRequest},
 };
+use tracing::{debug, info};
 use url::Url;
 
 #[allow(dead_code)]
@@ -40,8 +41,22 @@ impl LLMClient {
 
     #[allow(dead_code)]
     pub async fn chat(&self, messages: Vec<ChatMessage>) -> Result<String> {
+        info!(
+            "Sending chat request to model: {} with {} messages",
+            self.model,
+            messages.len()
+        );
+        debug!("Messages: {:?}", messages);
+
         let request = ChatMessageRequest::new(self.model.clone(), messages);
         let response = self.client.send_chat_messages(request).await?;
+
+        info!(
+            "Received response from LLM ({} chars)",
+            response.message.content.len()
+        );
+        debug!("Response content: {}", response.message.content);
+
         Ok(response.message.content)
     }
 

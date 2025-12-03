@@ -64,7 +64,7 @@ mod tests {
         };
 
         let code = r#"
-            goon.system.log("Executor test");
+            goon.pack.getCurrentMood();
         "#;
         let result = executor.execute(code, context).await;
         assert!(result.is_ok());

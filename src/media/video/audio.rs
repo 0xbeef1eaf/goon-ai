@@ -2,13 +2,12 @@
 //!
 //! Handles audio decoding and playback via cpal, synchronized with video.
 
-use bytemuck::Pod;
 use cpal::SizedSample;
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use futures::FutureExt;
 use futures::future::OptionFuture;
 use ringbuf::HeapRb;
-use ringbuf::ring_buffer::{RbRef, RbWrite};
+use ringbuf::traits::{Consumer, Producer, Split};
 use std::future::Future;
 use std::pin::Pin;
 
@@ -155,16 +154,18 @@ trait FFmpegToCpalSampleForwarder {
     ) -> Pin<Box<dyn Future<Output = ()> + '_>>;
 }
 
-impl<T: Pod, R: RbRef> FFmpegToCpalSampleForwarder for ringbuf::Producer<T, R>
-where
-    <R as RbRef>::Rb: RbWrite<T>,
-{
+impl<T: Copy + 'static, P: Producer<Item = T>> FFmpegToCpalSampleForwarder for P {
     fn forward(
         &mut self,
         audio_frame: ffmpeg_next::frame::Audio,
     ) -> Pin<Box<dyn Future<Output = ()> + '_>> {
         Box::pin(async move {
-            let cpal_sample_data: &[T] = bytemuck::cast_slice(audio_frame.data(0));
+            // let cpal_sample_data: &[T] = bytemuck::cast_slice(audio_frame.data(0));
+            let data = audio_frame.data(0);
+            let len = data.len() / std::mem::size_of::<T>();
+            let ptr = data.as_ptr() as *const T;
+            let cpal_sample_data: &[T] = unsafe { std::slice::from_raw_parts(ptr, len) };
+
             // Buffer the samples for playback
             self.push_slice(cpal_sample_data);
         })
@@ -181,7 +182,7 @@ struct FFmpegToCpalForwarder {
 }
 
 impl FFmpegToCpalForwarder {
-    fn new<T: Send + Pod + SizedSample + 'static>(
+    fn new<T: Send + SizedSample + 'static>(
         config: cpal::SupportedStreamConfig,
         device: &cpal::Device,
         packet_receiver: smol::channel::Receiver<ffmpeg_next::codec::packet::packet::Packet>,

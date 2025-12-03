@@ -37,6 +37,14 @@ pub struct SystemTray {
 impl SystemTray {
     /// Create a new system tray icon with menu
     pub fn new() -> Result<Self> {
+        // if on linux, configure gtk
+        #[cfg(target_os = "linux")]
+        {
+            if gtk::init().is_err() {
+                eprintln!("Failed to initialize GTK for system tray");
+            }
+        }
+
         let (command_tx, command_rx) = channel();
 
         // Create menu items

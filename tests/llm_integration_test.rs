@@ -12,7 +12,7 @@ fn test_llm_prompt_construction_flow() {
         meta: PackMeta {
             name: "LLMPack".to_string(),
             version: "1.0.0".to_string(),
-            permissions: vec![Permission::Prompt],
+            permissions: vec![Permission::WriteLines],
         },
         moods: vec![Mood {
             name: "Curious".to_string(),

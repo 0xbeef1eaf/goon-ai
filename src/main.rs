@@ -23,12 +23,12 @@ fn main() -> Result<()> {
     // Store window handle for LLM loop thread
     let window_handle_for_llm = window_handle.clone();
 
-    info!("Calling run_event_loop...");
+    // Initialize tracing with EnvFilter to allow RUST_LOG configuration
+    // Default to info if RUST_LOG is not set
+    let env_filter = tracing_subscriber::EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info"));
 
-    // Run the Slint event loop with window spawner
-    run_event_loop(window_spawner)?;
-
-    info!("Slint event loop exited");
+    tracing_subscriber::fmt().with_env_filter(env_filter).init();
 
     // Spawn LLM loop thread
     let _llm_thread = std::thread::spawn(move || {
@@ -42,6 +42,7 @@ fn main() -> Result<()> {
             let settings = match Settings::load() {
                 Ok(s) => Arc::new(s),
                 Err(e) => {
+                    eprintln!("Failed to load settings: {}", e);
                     tracing::error!("Failed to load settings: {}", e);
                     return;
                 }
@@ -50,6 +51,7 @@ fn main() -> Result<()> {
             let pack_config = match PackConfig::load(&settings.runtime.pack.current) {
                 Ok(c) => Arc::new(c),
                 Err(e) => {
+                    eprintln!("Failed to load pack config: {}", e);
                     tracing::error!("Failed to load pack config: {}", e);
                     return;
                 }
@@ -59,6 +61,11 @@ fn main() -> Result<()> {
             let user_perms: PermissionSet = settings.runtime.permissions.clone().into();
             let pack_perms: PermissionSet = pack_config.meta.permissions.clone().into();
             let active_perms = PermissionResolver::resolve(&pack_perms, &user_perms);
+
+            info!("User permissions: {:?}", user_perms);
+            info!("Pack permissions: {:?}", pack_perms);
+            info!("Resolved active permissions: {:?}", active_perms);
+
             let permissions = Arc::new(PermissionChecker::new(active_perms));
 
             info!("LLM loop thread initialized, waiting for run signal...");
@@ -80,6 +87,7 @@ fn main() -> Result<()> {
             // Run the orchestrator loop
             // TODO: Add check for is_running to pause/resume
             if let Err(e) = orchestrator.run().await {
+                eprintln!("Orchestrator error: {}", e);
                 tracing::error!("Orchestrator error: {}", e);
             }
         });
@@ -124,6 +132,13 @@ fn main() -> Result<()> {
             }
         },
     );
+
+    info!("Calling run_event_loop...");
+
+    // Run the Slint event loop with window spawner
+    run_event_loop(window_spawner)?;
+
+    info!("Slint event loop exited");
 
     Ok(())
 }
