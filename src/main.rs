@@ -1,9 +1,7 @@
 use anyhow::Result;
-use clap::{Parser, Subcommand};
 use goon_ai::app_loop::orchestrator::Orchestrator;
 use goon_ai::config::pack::PackConfig;
 use goon_ai::config::settings::Settings;
-use goon_ai::core::app::App;
 use goon_ai::gui::tray::{SystemTray, TrayCommand};
 use goon_ai::gui::windows::{WindowSpawner, run_event_loop};
 use goon_ai::permissions::{PermissionChecker, PermissionResolver, PermissionSet};
@@ -11,61 +9,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use tracing::info;
 
-#[derive(Parser)]
-#[command(author, version, about, long_about = None)]
-struct Cli {
-    #[command(subcommand)]
-    command: Option<Commands>,
-}
-
-#[derive(Subcommand)]
-enum Commands {
-    /// Run the application (default) - starts system tray
-    Run,
-    /// Configure the application (Web Interface)
-    Config,
-    /// Run a JavaScript/TypeScript script in the sandbox
-    #[command(about = "Execute a script in the goon.ai sandbox")]
-    Script {
-        /// Path to the script file
-        #[arg(value_name = "FILE")]
-        path: std::path::PathBuf,
-    },
-}
-
 fn main() -> Result<()> {
-    // Initialize tracing
-    tracing_subscriber::fmt::init();
-
-    // Initialize GTK on Linux (required for tray-icon with libappindicator)
-    #[cfg(target_os = "linux")]
-    {
-        // Only initialize GTK if we're going to use the tray
-        // GTK init is safe to call multiple times
-        let _ = gtk::init();
-    }
-
-    let cli = Cli::parse();
-
-    match cli.command.unwrap_or(Commands::Run) {
-        Commands::Run => {
-            info!("Starting goon.ai with system tray...");
-            run_with_tray()?;
-        }
-        Commands::Config => {
-            info!("Starting configuration server at http://localhost:3000");
-            run_config_server()?;
-        }
-        Commands::Script { path } => {
-            info!("Running script: {:?}", path);
-            run_script(&path)?;
-        }
-    }
-    Ok(())
-}
-
-/// Run the application with system tray
-fn run_with_tray() -> Result<()> {
     // Create window spawner channel pair
     let (window_handle, window_spawner) = WindowSpawner::create();
 
@@ -78,6 +22,13 @@ fn run_with_tray() -> Result<()> {
 
     // Store window handle for LLM loop thread
     let window_handle_for_llm = window_handle.clone();
+
+    info!("Calling run_event_loop...");
+
+    // Run the Slint event loop with window spawner
+    run_event_loop(window_spawner)?;
+
+    info!("Slint event loop exited");
 
     // Spawn LLM loop thread
     let _llm_thread = std::thread::spawn(move || {
@@ -139,6 +90,7 @@ fn run_with_tray() -> Result<()> {
     let tray_cell = std::cell::RefCell::new(tray);
     let is_running_for_tray = is_running.clone();
 
+    // Start the timer to poll tray commands
     timer.start(
         slint::TimerMode::Repeated,
         std::time::Duration::from_millis(50),
@@ -173,60 +125,5 @@ fn run_with_tray() -> Result<()> {
         },
     );
 
-    // Run the Slint event loop with window spawner
-    run_event_loop(window_spawner)?;
-
     Ok(())
-}
-
-/// Run the configuration server (web UI)
-fn run_config_server() -> Result<()> {
-    // Create window spawner for potential UI needs
-    let (_window_handle, window_spawner) = WindowSpawner::create();
-
-    // Spawn Web Server in a separate thread
-    std::thread::spawn(move || {
-        let rt = tokio::runtime::Builder::new_multi_thread()
-            .enable_all()
-            .build()
-            .unwrap();
-
-        rt.block_on(async move {
-            // For now, just serve static files
-            // TODO: Wire up proper config API
-            let app = axum::Router::new()
-                .nest_service("/", tower_http::services::ServeDir::new("web/dist"));
-
-            let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
-
-            // Open browser
-            let _ = open::that("http://localhost:3000");
-
-            info!("Config server listening on http://localhost:3000");
-            axum::serve(listener, app).await.unwrap();
-        });
-    });
-
-    // Run Slint event loop
-    run_event_loop(window_spawner)?;
-
-    Ok(())
-}
-
-/// Run a script in the sandbox
-fn run_script(path: &std::path::Path) -> Result<()> {
-    let rt = tokio::runtime::Builder::new_multi_thread()
-        .enable_all()
-        .build()?;
-
-    rt.block_on(async {
-        // Initialize App
-        let app = App::new()?;
-
-        // Read the script file
-        let script_content = std::fs::read_to_string(path)?;
-
-        // Run App with the script
-        app.run_script(&script_content).await
-    })
 }

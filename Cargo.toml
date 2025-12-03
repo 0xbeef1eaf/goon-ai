@@ -39,9 +39,6 @@ open = "5.3.3"
 rfd = "0.14"
 egui = "0.28"
 eframe = { version = "0.28", features = ["wgpu"] }
-clap = { version = "4.5.53", features = ["derive"] }
-axum = { version = "0.8.7", features = ["multipart"] }
-tower-http = { version = "0.6.7", features = ["fs", "cors", "trace"] }
 tracing = "0.1.43"
 tracing-subscriber = "0.3.22"
 glyph_brush = "0.7"

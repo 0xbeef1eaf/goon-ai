@@ -263,9 +263,6 @@ impl WindowSpawner {
             {
                 winit_window.set_ime_allowed(true);
                 winit_window.focus_window();
-                winit_window.set_window_level(
-                    i_slint_backend_winit::winit::window::WindowLevel::AlwaysOnTop,
-                );
                 winit_window.set_resizable(false);
                 winit_window.set_decorations(false);
                 winit_window.set_window_icon(None);
@@ -611,6 +608,6 @@ pub fn run_event_loop(spawner: WindowSpawner) -> Result<()> {
         },
     );
 
-    slint::run_event_loop()?;
+    slint::run_event_loop_until_quit()?;
     Ok(())
 }
