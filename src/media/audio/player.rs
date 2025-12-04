@@ -1,5 +1,5 @@
 use anyhow::Result;
-use rodio::{Decoder, OutputStreamHandle, Sink, Source};
+use rodio::{Decoder, Sink, Source, mixer::Mixer};
 use std::fs::File;
 use std::io::BufReader;
 use std::path::PathBuf;
@@ -11,8 +11,8 @@ pub struct AudioPlayer {
 }
 
 impl AudioPlayer {
-    pub fn new(stream_handle: &OutputStreamHandle, file_path: PathBuf) -> Result<Self> {
-        let sink = Sink::try_new(stream_handle)?;
+    pub fn new(mixer: &Mixer, file_path: PathBuf) -> Result<Self> {
+        let sink = Sink::connect_new(mixer);
         Ok(Self { sink, file_path })
     }
 
