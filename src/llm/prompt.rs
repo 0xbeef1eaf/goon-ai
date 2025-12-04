@@ -194,6 +194,7 @@ mod tests {
             &user,
             &history,
             "class image {}",
+            &[],
             true,
         );
 
@@ -233,6 +234,7 @@ mod tests {
             &user,
             &history,
             "class image {}",
+            &[],
             false,
         );
 
