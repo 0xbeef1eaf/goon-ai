@@ -134,7 +134,7 @@ jobs:
     needs: [lint, test, doc, benchmark]
     if: github.actor == 'dependabot[bot]'
     steps:
-      - uses: actions/github-script@v6
+      - uses: actions/github-script@v8
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
