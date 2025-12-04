@@ -1,3 +1,5 @@
+#![cfg(not(miri))]
+
 use goon_ai::config::pack::{Assets, Mood, PackConfig, PackMeta};
 use goon_ai::config::settings::User;
 use goon_ai::llm::conversation::ConversationManager;
@@ -44,7 +46,7 @@ fn test_llm_prompt_construction_flow() {
     history.add_message("user", "What is your mood?");
 
     // 3. Build Prompt
-    let messages = PromptBuilder::build(&pack_config, "Curious", &user, &history, "", true);
+    let messages = PromptBuilder::build(&pack_config, "Curious", &user, &history, "", &[], true);
 
     // 4. Verify Structure
     // Expect: System Prompt + 3 History Messages = 4 Total

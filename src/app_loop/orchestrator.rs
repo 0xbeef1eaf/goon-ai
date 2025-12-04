@@ -11,6 +11,7 @@ use crate::runtime::runtime::{GoonRuntime, RuntimeContext};
 use crate::typescript::compiler::TypeScriptCompiler;
 use anyhow::Result;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 use tokio::time::sleep;
 
@@ -20,6 +21,7 @@ pub struct Orchestrator {
     pack_config: Arc<PackConfig>,
     permissions: Arc<PermissionChecker>,
     window_spawner: WindowSpawnerHandle,
+    is_running: Arc<AtomicBool>,
 }
 
 impl Orchestrator {
@@ -28,6 +30,7 @@ impl Orchestrator {
         pack_config: Arc<PackConfig>,
         permissions: Arc<PermissionChecker>,
         window_spawner: WindowSpawnerHandle,
+        is_running: Arc<AtomicBool>,
     ) -> Self {
         Self {
             state: LoopState::new(),
@@ -35,6 +38,7 @@ impl Orchestrator {
             pack_config,
             permissions,
             window_spawner,
+            is_running,
         }
     }
 
@@ -84,6 +88,12 @@ impl Orchestrator {
         let mut runtime = GoonRuntime::new(context);
 
         loop {
+            // Check if paused
+            if !self.is_running.load(Ordering::Relaxed) {
+                sleep(Duration::from_millis(100)).await;
+                continue;
+            }
+
             self.state.iteration_count += 1;
             println!("Iteration: {}", self.state.iteration_count);
 
@@ -96,12 +106,17 @@ impl Orchestrator {
             }
 
             let execution_failed = self.state.retry_count > 0;
+
+            // Get active windows
+            let active_windows = self.window_spawner.get_active_windows().unwrap_or_default();
+
             let messages = PromptBuilder::build(
                 &self.pack_config,
                 &mood.name,
                 &self.settings.user,
                 &history,
                 &sdk_defs,
+                &active_windows,
                 execution_failed,
             );
 

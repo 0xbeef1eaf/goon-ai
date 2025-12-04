@@ -42,11 +42,12 @@ pub struct VideoOptions {
 
 /// Plays a video in a new window.
 ///
-/// Returns a handle ID that can be used to control the window (move, resize, close).
+/// Returns a handle object that can be used to control the window.
+/// The returned handle has a `.close()` method to close the window.
 ///
 /// @param options - Optional configuration including tags for asset selection,
 ///                  window position, size, looping, and muting options.
-/// @returns A unique handle ID string for controlling this video window.
+/// @returns A unique handle object for controlling this video window.
 #[op2(async)]
 #[string]
 pub async fn op_show_video(

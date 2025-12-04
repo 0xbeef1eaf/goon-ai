@@ -1,3 +1,5 @@
+#![cfg(not(miri))]
+
 use goon_ai::assets::loader::AssetLoader;
 use goon_ai::assets::selector::AssetSelector;
 use goon_ai::assets::types::Asset;
@@ -8,6 +10,7 @@ use goon_ai::runtime::GoonRuntime;
 use goon_ai::runtime::runtime::RuntimeContext;
 
 #[tokio::test]
+#[cfg_attr(miri, ignore)]
 async fn test_asset_loading_to_permission_check() {
     // 1. Setup Configuration
     // Pack: Requests Image and Video permissions. Contains Image and Video assets.
@@ -114,7 +117,7 @@ async fn test_asset_loading_to_permission_check() {
         })()
     "#;
 
-    let result = runtime.execute_script(&code_image).await;
+    let result = runtime.execute_script(code_image).await;
     assert!(
         result.is_ok(),
         "Allowed image operation failed: {:?}",
@@ -139,7 +142,7 @@ async fn test_asset_loading_to_permission_check() {
         })()
     "#;
 
-    let result = runtime2.execute_script(&code_video).await;
+    let result = runtime2.execute_script(code_video).await;
     assert!(
         result.is_err(),
         "Denied video operation succeeded unexpectedly"

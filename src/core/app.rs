@@ -6,6 +6,7 @@ use crate::permissions::{PermissionChecker, PermissionResolver, PermissionSet};
 use anyhow::Result;
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
 
 pub struct App {
     pub settings: Arc<Settings>,
@@ -88,6 +89,7 @@ impl App {
             self.pack_config.clone(),
             self.permissions.clone(),
             window_handle.clone(),
+            Arc::new(AtomicBool::new(true)),
         );
 
         // Schedule the orchestrator to run within the Slint event loop context
@@ -96,7 +98,7 @@ impl App {
                 eprintln!("Orchestrator error: {}", e);
             }
             // Quit the event loop when done
-            let _ = slint::quit_event_loop();
+            // let _ = slint::quit_event_loop();
         })
         .map_err(|e| anyhow::anyhow!("Failed to spawn orchestrator task: {}", e))?;
 
@@ -124,6 +126,7 @@ impl App {
             self.pack_config.clone(),
             self.permissions.clone(),
             window_handle.clone(),
+            Arc::new(AtomicBool::new(true)),
         );
 
         // Clone script for the closure
@@ -137,7 +140,7 @@ impl App {
                 eprintln!("Orchestrator error: {}", e);
             }
             // Quit the event loop when done
-            let _ = slint::quit_event_loop();
+            // let _ = slint::quit_event_loop();
         })
         .map_err(|e| anyhow::anyhow!("Failed to spawn script task: {}", e))?;
 

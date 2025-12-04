@@ -1,5 +1,5 @@
 use super::image;
-use super::types::{WindowCommand, WindowHandle, WindowResponse};
+use super::types::{WindowCommand, WindowHandle, WindowInfo, WindowOptions, WindowResponse};
 use super::video::{self, VideoState};
 use super::write_lines;
 use super::{ImageWindow, WriteLinesWindow};
@@ -53,6 +53,7 @@ impl WindowSpawnerHandle {
         text_color: [f32; 4],
         background_color: [f32; 4],
         alignment: String,
+        window_options: Option<WindowOptions>,
     ) -> Result<WindowHandle> {
         let handle = WindowHandle(uuid::Uuid::new_v4());
         self.send(WindowCommand::SpawnWriteLines {
@@ -62,6 +63,7 @@ impl WindowSpawnerHandle {
             text_color,
             background_color,
             alignment,
+            window_options,
         })?;
         Ok(handle)
     }
@@ -117,6 +119,13 @@ impl WindowSpawnerHandle {
     pub fn close_window(&self, handle: WindowHandle) -> Result<()> {
         self.send(WindowCommand::CloseWindow(handle))
     }
+
+    pub fn get_active_windows(&self) -> Result<Vec<WindowInfo>> {
+        let (tx, rx) = channel();
+        self.send(WindowCommand::GetActiveWindows(tx))?;
+        rx.recv()
+            .map_err(|e| anyhow::anyhow!("Failed to receive active windows: {}", e))
+    }
 }
 
 /// Window spawner that processes commands on the Slint UI thread
@@ -145,6 +154,28 @@ impl WindowSpawner {
     pub fn process_commands(&self) {
         while let Ok(cmd) = self.command_rx.try_recv() {
             match cmd {
+                WindowCommand::GetActiveWindows(tx) => {
+                    WINDOWS.with(|windows| {
+                        let windows = windows.borrow();
+                        let info: Vec<WindowInfo> = windows
+                            .iter()
+                            .map(|(handle, window_type)| WindowInfo {
+                                handle: *handle,
+                                window_type: match window_type {
+                                    WindowType::WriteLines(_) => "WriteLines".to_string(),
+                                    WindowType::Image(_) => "Image".to_string(),
+                                    WindowType::Video(_) => "Video".to_string(),
+                                },
+                                description: match window_type {
+                                    WindowType::WriteLines(_) => "Text prompt window".to_string(),
+                                    WindowType::Image(_) => "Image display window".to_string(),
+                                    WindowType::Video(_) => "Video player window".to_string(),
+                                },
+                            })
+                            .collect();
+                        let _ = tx.send(info);
+                    });
+                }
                 WindowCommand::SpawnWriteLines {
                     handle,
                     text,
@@ -152,6 +183,7 @@ impl WindowSpawner {
                     text_color,
                     background_color,
                     alignment,
+                    window_options,
                 } => {
                     match write_lines::spawn(
                         handle,
@@ -160,6 +192,7 @@ impl WindowSpawner {
                         text_color,
                         background_color,
                         &alignment,
+                        window_options,
                         self.response_tx.clone(),
                     ) {
                         Ok(window) => {
@@ -289,6 +322,6 @@ pub fn run_event_loop(spawner: WindowSpawner) -> Result<()> {
         },
     );
 
-    slint::run_event_loop()?;
+    slint::run_event_loop_until_quit()?;
     Ok(())
 }

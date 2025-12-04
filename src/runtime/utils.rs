@@ -16,6 +16,7 @@ mod tests {
     use crate::permissions::{Permission, PermissionChecker, PermissionSet};
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn test_check_permission() {
         let runtime = deno_core::JsRuntime::new(Default::default());
         {

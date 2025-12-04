@@ -8,6 +8,8 @@ use uuid::Uuid;
 
 /// Closes a window by its handle ID.
 ///
+/// You can also use the `.close()` method on the handle object returned by show functions.
+///
 /// @param handle - The handle ID of the window to close.
 #[op2(async)]
 pub async fn op_close_window(

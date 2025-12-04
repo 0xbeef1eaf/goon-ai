@@ -45,6 +45,7 @@ url = "2.5"
 uuid = { version = "1.18.1", features = ["v4", "serde"] }
 walkdir = "2"
 chrono = "0.4.42"
+winit = "0.30"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 gtk = { version = "0.18", features = ["v3_24"] }
@@ -68,3 +69,14 @@ walkdir = "2"
 [[bin]]
 name = "goon"
 path = "src/main.rs"
+
+[dev-dependencies]
+criterion = "0.5"
+codspeed-criterion-compat = "2.7.2"
+
+[[bench]]
+name = "sdk_benchmark"
+harness = false
+
+[patch.crates-io]
+tiny-xlib = { git = "https://github.com/cgevans/tiny-xlib", branch = "coverage_off" }

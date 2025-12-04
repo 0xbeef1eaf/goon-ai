@@ -1,5 +1,6 @@
 use crate::config::pack::PackConfig;
 use crate::config::settings::User;
+use crate::gui::windows::types::WindowInfo;
 use crate::llm::conversation::ConversationManager;
 use chrono::Datelike;
 use ollama_rs::generation::chat::{ChatMessage, MessageRole};
@@ -15,6 +16,7 @@ impl PromptBuilder {
         user: &User,
         history: &ConversationManager,
         sdk_defs: &str,
+        active_windows: &[WindowInfo],
         execution_failed: bool,
     ) -> Vec<ChatMessage> {
         let mut messages = Vec::new();
@@ -80,7 +82,20 @@ impl PromptBuilder {
         system_content.push_str(sdk_defs);
         system_content.push_str("\n```\n\n");
 
-        // 4. User Profile
+        // 4. Active Windows
+        if !active_windows.is_empty() {
+            system_content.push_str("# Active Windows\n");
+            system_content.push_str("The following windows are currently open. You can close them using their handle ID.\n");
+            for window in active_windows {
+                system_content.push_str(&format!(
+                    "- Type: {}, Handle: {}, Description: {}\n",
+                    window.window_type, window.handle.0, window.description
+                ));
+            }
+            system_content.push('\n');
+        }
+
+        // 5. User Profile
         system_content.push_str("# User Profile\n");
         system_content.push_str(&format!("Name: {}\n", user.name));
         system_content.push_str(&format!("Gender: {}\n\n", user.gender));
@@ -179,6 +194,7 @@ mod tests {
             &user,
             &history,
             "class image {}",
+            &[],
             true,
         );
 
@@ -218,6 +234,7 @@ mod tests {
             &user,
             &history,
             "class image {}",
+            &[],
             false,
         );
 
