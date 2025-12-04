@@ -20,10 +20,10 @@ pub struct WriteLinesOptions {
     pub text: String,
     /// Font size in pixels
     pub font_size: Option<f32>,
-    /// Text color as RGBA array [r, g, b, a] with values from 0.0 to 1.0
-    pub color: Option<[f32; 4]>,
-    /// Background color as RGBA array [r, g, b, a] with values from 0.0 to 1.0
-    pub background: Option<[f32; 4]>,
+    /// Text color as RGBA array [r, g, b, a] with values from 0 to 255
+    pub color: Option<[u8; 4]>,
+    /// Background color as RGBA array [r, g, b, a] with values from 0 to 255
+    pub background: Option<[u8; 4]>,
     /// Padding around the text in pixels
     pub padding: Option<f32>,
     /// Maximum width of the text area in pixels before wrapping
@@ -32,19 +32,18 @@ pub struct WriteLinesOptions {
     pub alignment: Option<String>,
     /// Window configuration options
     pub window: Option<WindowOptions>,
-    /// Duration to display the prompt in seconds, after this the window will be closed automatically
-    pub duration: Option<f64>,
 }
 
 /// Displays text that the user has to repeat back to you before they can close the window.
 /// This works in a "Write lines for me" approach, where you provide the lines for the user to type back.
 /// The prompt window will stay on top until the user types the exact text you provided.
 ///
-/// Returns a handle ID that can be used to control the window (move, resize, close).
+/// Returns a handle object that can be used to control the window.
+/// The returned handle has a `.close()` method to close the window.
 ///
 /// @param options - Optional configuration including the text to display,
 ///                  font settings, colors, window position, and size.
-/// @returns A unique handle ID string for controlling this prompt window.
+/// @returns A unique handle object for controlling this prompt window.
 #[op2(async)]
 #[string]
 pub async fn op_show_write_lines(
@@ -71,8 +70,28 @@ pub async fn op_show_write_lines(
 
     let alignment = opts.alignment.unwrap_or_else(|| "left".to_string());
     let font_size = opts.font_size.unwrap_or(32.0);
-    let text_color = opts.color.unwrap_or([1.0, 1.0, 1.0, 1.0]);
-    let background_color = opts.background.unwrap_or([0.1, 0.1, 0.1, 0.95]);
+    let text_color = opts
+        .color
+        .map(|c| {
+            [
+                c[0] as f32 / 255.0,
+                c[1] as f32 / 255.0,
+                c[2] as f32 / 255.0,
+                c[3] as f32 / 255.0,
+            ]
+        })
+        .unwrap_or([1.0, 1.0, 1.0, 1.0]);
+    let background_color = opts
+        .background
+        .map(|c| {
+            [
+                c[0] as f32 / 255.0,
+                c[1] as f32 / 255.0,
+                c[2] as f32 / 255.0,
+                c[3] as f32 / 255.0,
+            ]
+        })
+        .unwrap_or([0.1, 0.1, 0.1, 0.95]);
 
     info!("Spawning write_lines window via channel");
     let handle = window_spawner
@@ -82,6 +101,7 @@ pub async fn op_show_write_lines(
             text_color,
             background_color,
             alignment,
+            opts.window,
         )
         .map_err(|e| {
             error!("Failed to spawn write_lines window: {}", e);

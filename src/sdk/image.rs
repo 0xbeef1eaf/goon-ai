@@ -20,7 +20,7 @@ use ts_rs::TS;
 #[serde(rename_all = "camelCase")]
 /// Options for displaying an image
 pub struct ImageOptions {
-    /// A list of additional tags to filter images by, they will be filtered by mood tags already
+    /// A list of additional tags to filter images by, they will be filtered by mood tags already, most of the time you will not need to provide any tags here
     pub tags: Option<Vec<String>>,
     /// Duration to display the image in seconds, after this the window will be closed automatically
     pub duration: Option<u64>,
@@ -30,11 +30,12 @@ pub struct ImageOptions {
 
 /// Displays an image in a new window.
 ///
-/// Returns a handle ID that can be used to control the window (move, resize, close).
+/// Returns a handle object that can be used to control the window.
+/// The returned handle has a `.close()` method to close the window.
 ///
 /// @param options - Optional configuration including tags for asset selection,
 ///                  window position, size, and opacity.
-/// @returns A unique handle ID string for controlling this image window.
+/// @returns A unique handle object for controlling this image window.
 #[op2(async)]
 #[string]
 pub async fn op_show_image(

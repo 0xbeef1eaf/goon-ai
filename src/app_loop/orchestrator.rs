@@ -96,12 +96,17 @@ impl Orchestrator {
             }
 
             let execution_failed = self.state.retry_count > 0;
+
+            // Get active windows
+            let active_windows = self.window_spawner.get_active_windows().unwrap_or_default();
+
             let messages = PromptBuilder::build(
                 &self.pack_config,
                 &mood.name,
                 &self.settings.user,
                 &history,
                 &sdk_defs,
+                &active_windows,
                 execution_failed,
             );
 

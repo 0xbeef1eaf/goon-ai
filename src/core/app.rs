@@ -96,7 +96,7 @@ impl App {
                 eprintln!("Orchestrator error: {}", e);
             }
             // Quit the event loop when done
-            let _ = slint::quit_event_loop();
+            // let _ = slint::quit_event_loop();
         })
         .map_err(|e| anyhow::anyhow!("Failed to spawn orchestrator task: {}", e))?;
 
@@ -137,7 +137,7 @@ impl App {
                 eprintln!("Orchestrator error: {}", e);
             }
             // Quit the event loop when done
-            let _ = slint::quit_event_loop();
+            // let _ = slint::quit_event_loop();
         })
         .map_err(|e| anyhow::anyhow!("Failed to spawn script task: {}", e))?;
 

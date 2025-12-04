@@ -27,3 +27,4 @@ settings.toml
 
 web/node_modules/
 web/dist/
+result
