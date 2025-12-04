@@ -20,7 +20,7 @@ jobs:
     outputs:
       version: ${{ steps.bump_version.outputs.version }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           ref: main
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -83,7 +83,7 @@ jobs:
             asset_name: goon-ai-macos-arm64
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           ref: main
 
