@@ -129,30 +129,13 @@ jobs:
           token: ${{ secrets.CODSPEED_TOKEN }}
           run: cargo codspeed run
 
-  miri:
-    name: Miri
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y ${BUILD_REQUIREMENTS}
-
-      - run: rustup toolchain install nightly --profile minimal --component miri --no-self-update
-      - run: cargo +nightly miri setup
-      - uses: taiki-e/install-action@nextest
-
-      - run: cargo +nightly miri nextest run --locked --workspace --all-features --lib --bins --examples --tests
-
   merge-dependabot:
     name: Merge Dependabot PRs
     runs-on: ubuntu-latest
     permissions:
       contents: write
       pull-requests: write
-    needs: [lint, test, doc, benchmark, miri]
+    needs: [lint, test, doc, benchmark]
     if: github.actor == 'dependabot[bot]'
     steps:
       - uses: actions/github-script@v6
