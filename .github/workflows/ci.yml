@@ -157,3 +157,27 @@ jobs:
       - uses: taiki-e/install-action@nextest
 
       - run: cargo +nightly miri nextest run --locked --workspace --all-features --lib --bins --examples --tests
+
+  merge-dependabot:
+    name: Merge Dependabot PRs
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    needs: [lint, test, doc, benchmark, miri]
+    if: github.actor == 'dependabot[bot]'
+    steps:
+      - uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const pr = context.payload.pull_request;
+            if (pr && pr.user.login === 'dependabot[bot]') {
+              await github.rest.pulls.merge({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: pr.number,
+                commit_title: `Merge Dependabot PR #${pr.number}`,
+                commit_message: 'Automated merge of Dependabot PR',
+              });
+            }
