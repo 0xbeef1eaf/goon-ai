@@ -12,7 +12,7 @@ use crate::sdk::{
 use crate::typescript::TypeScriptCompiler;
 use anyhow::Result;
 use deno_core::{JsRuntime, RuntimeOptions};
-use rodio::OutputStream;
+use rodio::{OutputStream, OutputStreamBuilder, mixer::Mixer};
 use std::sync::{Arc, Mutex};
 
 pub struct RuntimeContext {
@@ -30,8 +30,11 @@ pub struct GoonRuntime {
 
 impl GoonRuntime {
     pub fn new(context: RuntimeContext) -> Self {
-        let (audio_stream, stream_handle) = match OutputStream::try_default() {
-            Ok((s, h)) => (Some(s), Some(h)),
+        let (audio_stream, mixer) = match OutputStreamBuilder::open_default_stream() {
+            Ok(s) => {
+                let mixer = s.mixer().clone();
+                (Some(s), Some(mixer))
+            }
             Err(e) => {
                 eprintln!("Failed to initialize audio device: {}", e);
                 (None, None)
@@ -62,9 +65,9 @@ impl GoonRuntime {
             op_state.put(context.registry);
             op_state.put(context.mood);
 
-            if let Some(handle) = stream_handle {
+            if let Some(m) = mixer {
                 let audio_manager = Arc::new(Mutex::new(AudioManager::new(
-                    handle,
+                    m,
                     context.max_audio_concurrent,
                 )));
                 op_state.put(audio_manager);

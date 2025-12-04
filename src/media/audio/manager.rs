@@ -1,6 +1,6 @@
 use super::player::AudioPlayer;
 use anyhow::Result;
-use rodio::OutputStreamHandle;
+use rodio::mixer::Mixer;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -11,16 +11,16 @@ use uuid::Uuid;
 pub struct AudioHandle(pub Uuid);
 
 pub struct AudioManager {
-    stream_handle: OutputStreamHandle,
+    mixer: Mixer,
     players: HashMap<AudioHandle, AudioPlayer>,
     play_order: Vec<AudioHandle>,
     max_concurrent: usize,
 }
 
 impl AudioManager {
-    pub fn new(stream_handle: OutputStreamHandle, max_concurrent: usize) -> Self {
+    pub fn new(mixer: Mixer, max_concurrent: usize) -> Self {
         Self {
-            stream_handle,
+            mixer,
             players: HashMap::new(),
             play_order: Vec::new(),
             max_concurrent,
@@ -44,7 +44,7 @@ impl AudioManager {
             }
         }
 
-        let player = AudioPlayer::new(&self.stream_handle, file_path)?;
+        let player = AudioPlayer::new(&self.mixer, file_path)?;
         player.set_volume(volume);
         player.play(duration)?;
 
