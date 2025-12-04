@@ -1,12 +1,7 @@
-use crate::assets::registry::AssetRegistry;
 use crate::config::pack::Mood;
-use crate::gui::window_manager::GuiInterface;
-use crate::permissions::PermissionChecker;
 use crate::runtime::GoonRuntime;
 use crate::typescript::TypeScriptCompiler;
 use anyhow::Result;
-
-use std::sync::Arc;
 
 pub struct Executor {
     compiler: TypeScriptCompiler,
@@ -40,27 +35,10 @@ impl Executor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::gui::content::ContentConstructor;
-    use crate::gui::window_manager::{GuiInterface, WindowHandle, WindowOptions};
+    use crate::assets::registry::AssetRegistry;
+    use crate::gui::WindowSpawner;
     use crate::permissions::{PermissionChecker, PermissionSet};
-
-    struct MockGuiController;
-
-    impl GuiInterface for MockGuiController {
-        fn create_window(&self, _options: WindowOptions) -> Result<WindowHandle> {
-            Ok(WindowHandle(uuid::Uuid::new_v4()))
-        }
-        fn close_window(&self, _handle: WindowHandle) -> Result<()> {
-            Ok(())
-        }
-        fn set_content(
-            &self,
-            _handle: WindowHandle,
-            _content: Box<dyn ContentConstructor>,
-        ) -> Result<()> {
-            Ok(())
-        }
-    }
+    use std::sync::Arc;
 
     #[tokio::test]
     async fn test_executor_run() {
@@ -68,25 +46,25 @@ mod tests {
         let set = PermissionSet::new();
         let permissions = PermissionChecker::new(set);
 
-        let gui_controller = Arc::new(MockGuiController);
+        let (window_handle, _spawner) = WindowSpawner::create();
         let registry = Arc::new(AssetRegistry::new());
         let mood = Mood {
             name: "Test".to_string(),
             description: "".to_string(),
             tags: vec![],
+            prompt: None,
         };
 
         let context = crate::runtime::runtime::RuntimeContext {
             permissions,
-            gui_controller,
+            window_spawner: window_handle,
             registry,
             mood,
             max_audio_concurrent: 10,
-            max_video_concurrent: 3,
         };
 
         let code = r#"
-            goon.system.log("Executor test");
+            goon.pack.getCurrentMood();
         "#;
         let result = executor.execute(code, context).await;
         assert!(result.is_ok());
@@ -98,21 +76,21 @@ mod tests {
         let set = PermissionSet::new();
         let permissions = PermissionChecker::new(set);
 
-        let gui_controller = Arc::new(MockGuiController);
+        let (window_handle, _spawner) = WindowSpawner::create();
         let registry = Arc::new(AssetRegistry::new());
         let mood = Mood {
             name: "Test".to_string(),
             description: "".to_string(),
             tags: vec![],
+            prompt: None,
         };
 
         let context = crate::runtime::runtime::RuntimeContext {
             permissions,
-            gui_controller,
+            window_spawner: window_handle,
             registry,
             mood,
             max_audio_concurrent: 10,
-            max_video_concurrent: 3,
         };
 
         let code = "const x: number = ;"; // Invalid syntax

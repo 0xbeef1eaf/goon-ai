@@ -2,6 +2,7 @@ use crate::assets::registry::AssetRegistry;
 use crate::assets::selector::AssetSelector;
 use crate::assets::types::Asset;
 use crate::config::pack::Mood;
+use crate::permissions::Permission;
 use crate::runtime::error::OpError;
 use crate::runtime::utils::check_permission;
 use crate::sdk::types::WindowOptions;
@@ -15,15 +16,24 @@ use std::sync::Arc;
 use ts_rs::TS;
 
 #[derive(Deserialize, Debug, Default, TS)]
-#[ts(export)]
 #[serde(rename_all = "camelCase")]
+/// Options for displaying a hypnotic pattern
 pub struct HypnoOptions {
+    /// A list of additional tags to filter hypno patterns by, they will be filtered by mood tags already
     pub tags: Option<Vec<String>>,
+    /// Duration to display the pattern in seconds, after this the window will be closed automatically
     pub duration: Option<u64>,
-    #[serde(flatten)]
-    pub window: WindowOptions,
+    /// Window configuration options
+    pub window: Option<WindowOptions>,
 }
 
+/// Displays a hypnotic pattern in a new window.
+///
+/// Returns a handle ID that can be used to control the window (move, resize, close).
+///
+/// @param options - Optional configuration including tags for pattern selection,
+///                  duration, window position, and size.
+/// @returns A unique handle ID string for controlling this hypno window.
 #[op2(async)]
 pub async fn op_show_hypno(
     state: Rc<RefCell<OpState>>,
@@ -31,7 +41,7 @@ pub async fn op_show_hypno(
 ) -> Result<u32, OpError> {
     let (registry, mood) = {
         let mut state = state.borrow_mut();
-        check_permission(&mut state, "hypno")?;
+        check_permission(&mut state, Permission::Hypno)?;
         let registry = state.borrow::<Arc<AssetRegistry>>().clone();
         let mood = state.borrow::<Mood>().clone();
         (registry, mood)
@@ -58,7 +68,5 @@ pub async fn op_show_hypno(
     println!("Showing hypno: {:?} with options: {:?}", path, opts);
     Ok(3)
 }
-
-pub const TS_SOURCE: &str = include_str!("js/hypno.ts");
 
 deno_core::extension!(goon_hypno, ops = [op_show_hypno],);

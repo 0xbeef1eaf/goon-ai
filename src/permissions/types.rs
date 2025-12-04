@@ -3,14 +3,14 @@ use std::collections::HashSet;
 use std::str::FromStr;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "camelCase")]
 pub enum Permission {
     Image,
     Video,
     Audio,
     Hypno,
     Wallpaper,
-    Prompt,
+    WriteLines,
     Website,
 }
 
@@ -35,7 +35,7 @@ impl FromStr for Permission {
             "audio" => Ok(Permission::Audio),
             "hypno" => Ok(Permission::Hypno),
             "wallpaper" => Ok(Permission::Wallpaper),
-            "prompt" => Ok(Permission::Prompt),
+            "writelines" => Ok(Permission::WriteLines),
             "website" => Ok(Permission::Website),
             _ => Err(ParsePermissionError(s.to_string())),
         }
@@ -50,7 +50,7 @@ impl std::fmt::Display for Permission {
             Permission::Audio => write!(f, "audio"),
             Permission::Hypno => write!(f, "hypno"),
             Permission::Wallpaper => write!(f, "wallpaper"),
-            Permission::Prompt => write!(f, "prompt"),
+            Permission::WriteLines => write!(f, "writeLines"),
             Permission::Website => write!(f, "website"),
         }
     }
@@ -134,7 +134,10 @@ mod tests {
             Permission::from_str("wallpaper").unwrap(),
             Permission::Wallpaper
         );
-        assert_eq!(Permission::from_str("prompt").unwrap(), Permission::Prompt);
+        assert_eq!(
+            Permission::from_str("writeLines").unwrap(),
+            Permission::WriteLines
+        );
         assert_eq!(
             Permission::from_str("website").unwrap(),
             Permission::Website

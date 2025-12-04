@@ -117,6 +117,7 @@ mod tests {
             name: "Relaxed".to_string(),
             description: "".to_string(),
             tags: vec!["calm".to_string()],
+            prompt: None,
         };
 
         // Should only match img1 (nature, calm)
@@ -137,6 +138,7 @@ mod tests {
             name: "Any".to_string(),
             description: "".to_string(),
             tags: vec![], // No mood tags = allow all
+            prompt: None,
         };
 
         // Request "busy" -> matches img2 and img3
@@ -155,6 +157,7 @@ mod tests {
             name: "Nature".to_string(),
             description: "".to_string(),
             tags: vec!["nature".to_string()],
+            prompt: None,
         };
 
         // Mood "nature" (img1, img3) AND Request "busy" (img2, img3) -> Intersection is img3
@@ -175,6 +178,7 @@ mod tests {
             name: "Nature".to_string(),
             description: "".to_string(),
             tags: vec!["nature".to_string()],
+            prompt: None,
         };
 
         // Mood "nature" AND Request "city" -> No match
@@ -198,6 +202,7 @@ mod tests {
             name: "Action".to_string(),
             description: "".to_string(),
             tags: vec!["action".to_string()],
+            prompt: None,
         };
 
         let asset = selector.select_video(&mood, &[]);
@@ -223,6 +228,7 @@ mod tests {
             name: "Ambient".to_string(),
             description: "".to_string(),
             tags: vec!["ambient".to_string()],
+            prompt: None,
         };
 
         let asset = selector.select_audio(&mood, &[]);
@@ -248,6 +254,7 @@ mod tests {
             name: "Trance".to_string(),
             description: "".to_string(),
             tags: vec!["spiral".to_string()],
+            prompt: None,
         };
 
         let asset = selector.select_hypno(&mood, &[]);
@@ -272,6 +279,7 @@ mod tests {
             name: "Scenic".to_string(),
             description: "".to_string(),
             tags: vec!["scenic".to_string()],
+            prompt: None,
         };
 
         let asset = selector.select_wallpaper(&mood, &[]);

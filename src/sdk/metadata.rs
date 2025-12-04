@@ -52,9 +52,9 @@ pub fn get_modules() -> Vec<SdkModule> {
             dependencies: vec!["types"],
         },
         SdkModule {
-            name: "textPrompt",
-            template: templates::prompt_ts(),
-            permission: Some("prompt"),
+            name: "writeLines",
+            template: templates::write_lines_ts(),
+            permission: Some("writeLines"),
             dependencies: vec!["types", "image"],
         },
         SdkModule {

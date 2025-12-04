@@ -2,6 +2,7 @@ use crate::assets::registry::AssetRegistry;
 use crate::assets::selector::AssetSelector;
 use crate::assets::types::Asset;
 use crate::config::pack::Mood;
+use crate::permissions::Permission;
 use crate::runtime::error::OpError;
 use crate::runtime::utils::check_permission;
 use deno_core::OpState;
@@ -14,13 +15,16 @@ use std::sync::Arc;
 use ts_rs::TS;
 
 #[derive(Deserialize, Debug, Default, TS)]
-#[ts(export)]
 #[serde(rename_all = "camelCase")]
+/// Options for opening a website
 pub struct WebsiteOptions {
-    #[ts(optional)]
+    /// A list of additional tags to filter website URLs by, they will be filtered by mood tags already
     tags: Option<Vec<String>>,
 }
 
+/// Opens a website URL in the default browser.
+///
+/// @param options - Optional configuration including tags for URL selection.
 #[op2(async)]
 pub async fn op_open_website(
     state: Rc<RefCell<OpState>>,
@@ -28,7 +32,7 @@ pub async fn op_open_website(
 ) -> Result<(), OpError> {
     let (registry, mood) = {
         let mut state = state.borrow_mut();
-        check_permission(&mut state, "website")?;
+        check_permission(&mut state, Permission::Website)?;
         let registry = state.borrow::<Arc<AssetRegistry>>().clone();
         let mood = state.borrow::<Mood>().clone();
         (registry, mood)
@@ -55,12 +59,6 @@ pub async fn op_open_website(
     open::that(url).map_err(|e| OpError::new(&format!("Failed to open website: {}", e)))?;
 
     Ok(())
-}
-
-pub const TS_SOURCE: &str = include_str!("js/website.ts");
-
-pub fn get_source() -> String {
-    TS_SOURCE.to_string()
 }
 
 deno_core::extension!(goon_website, ops = [op_open_website],);

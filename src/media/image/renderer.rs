@@ -1,100 +1,37 @@
-use crate::gui::content::{ContentConstructor, Renderable};
+//! Image rendering module
+//!
+//! NOTE: This module is being deprecated as part of the transition to a pure Slint-based
+//! GUI architecture. The wgpu-based renderer is no longer used.
+//! Image windows will be implemented via Slint in the gui::windows module.
+
 use crate::media::image::animation::Animation;
 use anyhow::Result;
 use image::RgbaImage;
 use std::time::Instant;
 use wgpu::util::DeviceExt;
 
+/// Image content that can be displayed
 pub struct ImageContent {
     pub image: Option<RgbaImage>,
     pub animation: Option<Animation>,
 }
 
-impl ContentConstructor for ImageContent {
-    fn create_renderer(
-        &self,
-        device: &wgpu::Device,
-        queue: &wgpu::Queue,
-        config: &wgpu::SurfaceConfiguration,
-    ) -> Result<Box<dyn Renderable>> {
-        if let Some(anim) = &self.animation
-            && let Some(first_frame) = anim.frames.first()
-        {
-            let mut renderer = ImageRenderer::new(device, queue, config, &first_frame.buffer)?;
-            renderer.animation_state = Some(AnimationState {
-                animation: anim.clone(), // Clone animation data
-                current_frame: 0,
-                next_frame_time: Instant::now() + first_frame.delay,
-            });
-            return Ok(Box::new(renderer));
-        }
-
-        if let Some(img) = &self.image {
-            let renderer = ImageRenderer::new(device, queue, config, img)?;
-            return Ok(Box::new(renderer));
-        }
-
-        Err(anyhow::anyhow!("No image content provided"))
-    }
-}
-
 #[derive(Clone)]
+#[allow(dead_code)]
 struct AnimationState {
     animation: Animation,
     current_frame: usize,
     next_frame_time: Instant,
 }
 
+/// wgpu-based image renderer (deprecated - transitioning to Slint)
+#[allow(dead_code)]
 pub struct ImageRenderer {
     texture: wgpu::Texture,
     bind_group: wgpu::BindGroup,
     pipeline: wgpu::RenderPipeline,
     opacity_buffer: wgpu::Buffer,
     animation_state: Option<AnimationState>,
-}
-
-impl Renderable for ImageRenderer {
-    fn render(
-        &self,
-        encoder: &mut wgpu::CommandEncoder,
-        view: &wgpu::TextureView,
-        queue: &wgpu::Queue,
-        opacity: f32,
-    ) {
-        self.render_internal(encoder, view, queue, opacity);
-    }
-
-    fn update(&mut self, _device: &wgpu::Device, queue: &wgpu::Queue) -> Option<Instant> {
-        let mut next_time = None;
-        let mut frame_to_update = None;
-
-        if let Some(anim_state) = &mut self.animation_state {
-            let now = Instant::now();
-            if now >= anim_state.next_frame_time {
-                anim_state.current_frame =
-                    (anim_state.current_frame + 1) % anim_state.animation.frames.len();
-                let frame = &anim_state.animation.frames[anim_state.current_frame];
-                anim_state.next_frame_time = now + frame.delay;
-
-                frame_to_update = Some(frame.buffer.clone());
-            }
-            next_time = Some(anim_state.next_frame_time);
-        }
-
-        if let Some(buffer) = frame_to_update {
-            self.update_image(queue, &buffer);
-        }
-
-        next_time
-    }
-
-    fn resize(
-        &mut self,
-        _device: &wgpu::Device,
-        _queue: &wgpu::Queue,
-        _config: &wgpu::SurfaceConfiguration,
-    ) {
-    }
 }
 
 impl ImageRenderer {
@@ -104,16 +41,6 @@ impl ImageRenderer {
         config: &wgpu::SurfaceConfiguration,
         image: &RgbaImage,
     ) -> Result<Self> {
-        // ... existing new implementation ...
-        // Need to copy the body of new here, but I'll use edit to wrap it.
-        // Wait, I'm replacing the whole file content structure basically.
-        // Let's just add the impl Renderable and struct updates.
-
-        // I'll do this in steps to avoid massive replace block if possible,
-        // but the struct definition changes so I need to update new() return type too.
-
-        // Let's just use the existing new() logic but update the struct init.
-
         let texture_size = wgpu::Extent3d {
             width: image.width(),
             height: image.height(),
@@ -274,6 +201,7 @@ impl ImageRenderer {
         })
     }
 
+    #[allow(dead_code)]
     pub fn update_image(&self, queue: &wgpu::Queue, image: &RgbaImage) {
         let texture_size = wgpu::Extent3d {
             width: image.width(),
@@ -298,7 +226,8 @@ impl ImageRenderer {
         );
     }
 
-    fn render_internal(
+    #[allow(dead_code)]
+    pub fn render(
         &self,
         encoder: &mut wgpu::CommandEncoder,
         view: &wgpu::TextureView,

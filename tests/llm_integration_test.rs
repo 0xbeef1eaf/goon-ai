@@ -12,12 +12,13 @@ fn test_llm_prompt_construction_flow() {
         meta: PackMeta {
             name: "LLMPack".to_string(),
             version: "1.0.0".to_string(),
-            permissions: vec![Permission::Prompt],
+            permissions: vec![Permission::WriteLines],
         },
         moods: vec![Mood {
             name: "Curious".to_string(),
             description: "The AI is inquisitive.".to_string(),
             tags: vec!["questioning".to_string()],
+            prompt: None,
         }],
         assets: Assets {
             image: None,
@@ -27,6 +28,7 @@ fn test_llm_prompt_construction_flow() {
             wallpaper: None,
         },
         websites: None,
+        prompts: None,
     };
 
     let user = User {
@@ -42,7 +44,7 @@ fn test_llm_prompt_construction_flow() {
     history.add_message("user", "What is your mood?");
 
     // 3. Build Prompt
-    let messages = PromptBuilder::build(&pack_config, "Curious", &user, &history, "");
+    let messages = PromptBuilder::build(&pack_config, "Curious", &user, &history, "", true);
 
     // 4. Verify Structure
     // Expect: System Prompt + 3 History Messages = 4 Total
@@ -56,9 +58,8 @@ fn test_llm_prompt_construction_flow() {
     assert!(
         system_msg
             .content
-            .contains("The user's current mood is: **Curious**")
+            .contains("**Curious**: The AI is inquisitive.")
     );
-    assert!(system_msg.content.contains("The AI is inquisitive."));
 
     // Check for User integration
     assert!(system_msg.content.contains("Name: IntegrationUser"));

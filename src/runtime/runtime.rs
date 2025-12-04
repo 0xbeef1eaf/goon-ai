@@ -1,31 +1,30 @@
 use crate::assets::registry::AssetRegistry;
 use crate::config::pack::Mood;
-use crate::gui::window_manager::GuiInterface;
+use crate::gui::WindowSpawnerHandle;
 use crate::media::audio::manager::AudioManager;
-use crate::media::video::manager::VideoManager;
 use crate::permissions::PermissionChecker;
 use crate::sdk;
 use crate::sdk::{
-    audio::goon_audio, hypno::goon_hypno, image::goon_image, pack::goon_pack, prompt::goon_prompt,
-    system::goon_system, video::goon_video, wallpaper::goon_wallpaper, website::goon_website,
+    audio::goon_audio, hypno::goon_hypno, image::goon_image, pack::goon_pack, system::goon_system,
+    video::goon_video, wallpaper::goon_wallpaper, website::goon_website,
+    write_lines::goon_write_lines,
 };
 use crate::typescript::TypeScriptCompiler;
 use anyhow::Result;
-use deno_core::{JsRuntime, ModuleSpecifier, RuntimeOptions};
+use deno_core::{JsRuntime, RuntimeOptions};
 use rodio::OutputStream;
 use std::sync::{Arc, Mutex};
 
 pub struct RuntimeContext {
     pub permissions: PermissionChecker,
-    pub gui_controller: Arc<dyn GuiInterface>,
+    pub window_spawner: WindowSpawnerHandle,
     pub registry: Arc<AssetRegistry>,
     pub mood: Mood,
     pub max_audio_concurrent: usize,
-    pub max_video_concurrent: usize,
 }
 
 pub struct GoonRuntime {
-    js_runtime: JsRuntime,
+    pub js_runtime: JsRuntime,
     _audio_stream: Option<OutputStream>,
 }
 
@@ -48,7 +47,7 @@ impl GoonRuntime {
                 goon_audio::init(),
                 goon_hypno::init(),
                 goon_wallpaper::init(),
-                goon_prompt::init(),
+                goon_write_lines::init(),
                 goon_website::init(),
             ],
             ..Default::default()
@@ -59,7 +58,7 @@ impl GoonRuntime {
             let op_state = js_runtime.op_state();
             let mut op_state = op_state.borrow_mut();
             op_state.put(context.permissions);
-            op_state.put(context.gui_controller);
+            op_state.put(context.window_spawner);
             op_state.put(context.registry);
             op_state.put(context.mood);
 
@@ -70,11 +69,6 @@ impl GoonRuntime {
                 )));
                 op_state.put(audio_manager);
             }
-
-            let video_manager = Arc::new(tokio::sync::Mutex::new(VideoManager::new(
-                context.max_video_concurrent,
-            )));
-            op_state.put(video_manager);
         }
 
         // Compile and load SDK bridge code
@@ -129,55 +123,40 @@ impl GoonRuntime {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::gui::content::ContentConstructor;
-    use crate::gui::window_manager::{GuiInterface, WindowHandle, WindowOptions};
+    use crate::gui::WindowSpawner;
     use crate::permissions::{Permission, PermissionChecker, PermissionSet};
 
-    struct MockGuiController;
-
-    impl GuiInterface for MockGuiController {
-        fn create_window(&self, _options: WindowOptions) -> Result<WindowHandle> {
-            Ok(WindowHandle(uuid::Uuid::new_v4()))
-        }
-        fn close_window(&self, _handle: WindowHandle) -> Result<()> {
-            Ok(())
-        }
-        fn set_content(
-            &self,
-            _handle: WindowHandle,
-            _content: Box<dyn ContentConstructor>,
-        ) -> Result<()> {
-            Ok(())
-        }
-    }
-
-    #[tokio::test]
-    async fn test_runtime_execution() {
+    fn create_test_context() -> (RuntimeContext, crate::gui::WindowSpawner) {
         let mut set = PermissionSet::new();
         set.add(Permission::Image);
         let permissions = PermissionChecker::new(set);
 
-        let gui_controller = Arc::new(MockGuiController);
+        let (window_handle, window_spawner) = WindowSpawner::create();
         let registry = Arc::new(AssetRegistry::new());
         let mood = Mood {
             name: "Test".to_string(),
             description: "".to_string(),
             tags: vec![],
+            prompt: None,
         };
         let context = RuntimeContext {
             permissions,
-            gui_controller,
+            window_spawner: window_handle,
             registry,
             mood,
             max_audio_concurrent: 10,
-            max_video_concurrent: 3,
         };
+        (context, window_spawner)
+    }
+
+    #[tokio::test]
+    async fn test_runtime_execution() {
+        let (context, _spawner) = create_test_context();
         let mut runtime = GoonRuntime::new(context);
 
         let code = r#"
-            goon.system.log("Hello from JS");
-            // const handle = await goon.image.show({ tags: ["test"] }); // This would fail without real window manager
-            // goon.system.log("Image handle: " + handle);
+            goon.pack.getCurrentMood();
+            // await goon.image.show({ tags: ["test"], duration: 1000 });
         "#;
 
         let result = runtime.execute_script(code).await;
@@ -186,25 +165,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_bigint_duration() {
-        let mut set = PermissionSet::new();
-        set.add(Permission::Image);
-        let permissions = PermissionChecker::new(set);
-
-        let gui_controller = Arc::new(MockGuiController);
-        let registry = Arc::new(AssetRegistry::new());
-        let mood = Mood {
-            name: "Test".to_string(),
-            description: "".to_string(),
-            tags: vec![],
-        };
-        let context = RuntimeContext {
-            permissions,
-            gui_controller,
-            registry,
-            mood,
-            max_audio_concurrent: 10,
-            max_video_concurrent: 3,
-        };
+        let (context, _spawner) = create_test_context();
         let mut runtime = GoonRuntime::new(context);
 
         let code = r#"
@@ -231,20 +192,20 @@ mod tests {
         let set = PermissionSet::new(); // No permissions
         let permissions = PermissionChecker::new(set);
 
-        let gui_controller = Arc::new(MockGuiController);
+        let (window_handle, _spawner) = WindowSpawner::create();
         let registry = Arc::new(AssetRegistry::new());
         let mood = Mood {
             name: "Test".to_string(),
             description: "".to_string(),
             tags: vec![],
+            prompt: None,
         };
         let context = RuntimeContext {
             permissions,
-            gui_controller,
+            window_spawner: window_handle,
             registry,
             mood,
             max_audio_concurrent: 10,
-            max_video_concurrent: 3,
         };
         let mut runtime = GoonRuntime::new(context);
 
@@ -264,20 +225,20 @@ mod tests {
         set.add(Permission::Image); // Just some permission
         let permissions = PermissionChecker::new(set);
 
-        let gui_controller = Arc::new(MockGuiController);
+        let (window_handle, _spawner) = WindowSpawner::create();
         let registry = Arc::new(AssetRegistry::new());
         let mood = Mood {
             name: "TestMood".to_string(),
             description: "A test mood".to_string(),
             tags: vec!["tag1".to_string()],
+            prompt: None,
         };
         let context = RuntimeContext {
             permissions,
-            gui_controller,
+            window_spawner: window_handle,
             registry,
             mood,
             max_audio_concurrent: 10,
-            max_video_concurrent: 3,
         };
         let mut runtime = GoonRuntime::new(context);
 

@@ -2,55 +2,69 @@
 name = "goon-ai"
 version = "0.1.0"
 edition = "2024"
+build = "build.rs"
 
 [dependencies]
-serde = { version = "1.0", features = ["derive"] }
-serde_yaml = "0.9"
 anyhow = "1.0"
-rand = "0.9"
+cpal = "0.16"
+deno_core = "0.371.0"
+deno_error = "0.7.1"
+derive_more = { version = "2", features = ["deref", "deref_mut"] }
+tray-icon = "0.21.2"
+muda = "0.17.1"
+bytemuck = "1.24.0"
+dirs = "6.0.0"
+ffmpeg-next = "8"
+futures = "0.3"
+i-slint-backend-winit = "1.14.1"
 image = { version = "0.25", features = ["gif"] }
-walkdir = "2"
 ollama-rs = "0.3"
+open = "5.3.3"
+proc-macro2 = "1.0.103"
+quote = "1.0.42"
+rand = "0.9"
 reqwest = "0.12"
-tokio = { version = "1", features = ["full"] }
-url = "2.5"
+ringbuf = "0.4"
+rodio = "0.19"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0.145"
+toml = "0.8"
+slint = { version = "1.14.1", features = ["gettext", "backend-winit", "backend-winit-wayland", "backend-winit-x11"] }
+smol = "2"
 swc = "47.0.0"
 swc_common = { version = "18.0.0", features = ["tty-emitter"] }
 swc_ecma_ast = "19.0.0"
-swc_ecma_parser = "28.0.0"
 swc_ecma_codegen = "21.0.0"
-deno_core = "0.371.0"
-deno_error = "0.7.1"
-serde_json = "1.0.145"
-uuid = { version = "1.18.1", features = ["v4", "serde"] }
-winit = "0.30"
-wgpu = "25"
-raw-window-handle = "0.6"
-bytemuck = { version = "1.24.0", features = ["derive"] }
-pollster = "0.4.0"
-ts-rs = "11.1.0"
+swc_ecma_parser = "28.0.0"
 syn = { version = "2.0.111", features = ["full", "visit"] }
-quote = "1.0.42"
-proc-macro2 = "1.0.103"
-rodio = "0.19"
-glyphon = "0.9.0"
-dirs = "6.0.0"
-open = "5.3.3"
+tokio = { version = "1", features = ["full"] }
+tracing = "0.1.43"
+tracing-subscriber = { version = "0.3.22", features = ["env-filter"] }
+ts-rs = "11.1.0"
+url = "2.5"
+uuid = { version = "1.18.1", features = ["v4", "serde"] }
+walkdir = "2"
+chrono = "0.4.42"
 
 [target.'cfg(target_os = "linux")'.dependencies]
-x11rb = "0.13"
+gtk = { version = "0.18", features = ["v3_24"] }
 
 [target.'cfg(target_os = "windows")'.dependencies]
-windows-sys = { version = "0.52", features = ["Win32_UI_WindowsAndMessaging", "Win32_Foundation"] }
+windows-sys = { version = "0.61", features = ["Win32_UI_WindowsAndMessaging", "Win32_Foundation"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 objc = "0.2"
 
 [build-dependencies]
 reqwest = { version = "0.12", features = ["blocking"] }
-zip = "0.6"
+zip = "6.0"
 tar = "0.4"
 flate2 = "1.0"
 anyhow = "1.0"
-sevenz-rust = "0.5"
+sevenz-rust = "0.6"
+slint-build = "1.14.1"
 walkdir = "2"
+
+[[bin]]
+name = "goon"
+path = "src/main.rs"

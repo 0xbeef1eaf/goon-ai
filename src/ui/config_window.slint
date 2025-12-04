@@ -1,0 +1,316 @@
+import {
+    Button,
+    LineEdit,
+    ComboBox,
+    VerticalBox,
+    HorizontalBox,
+    CheckBox,
+} from "std-widgets.slint";
+
+export struct AppSettings {
+    user_name: string,
+    current_pack: string,
+    initial_mood: string,
+}
+
+export struct PackMeta {
+    name: string,
+    version: string,
+    permissions: [string],
+}
+
+export component ConfigWindow inherits Window {
+    title: "GoonAI Configuration";
+    min-width: 800px;
+    min-height: 600px;
+    background: #111827; // gray-900
+
+    in-out property <AppSettings> settings: {
+        user_name: "User",
+        current_pack: "Default",
+        initial_mood: "Neutral",
+    };
+    in-out property <[string]> available_packs: [];
+    in-out property <string> active_tab: "settings";
+    in-out property <string> selected_pack: "";
+
+    // Pack Editor Properties
+    in-out property <PackMeta> current_pack_meta: { name: "Default", version: "1.0.0", permissions: ["image", "video"] };
+
+    callback save_settings();
+    callback save_pack();
+    callback create_pack();
+    callback select_pack(string);
+
+    HorizontalBox {
+        padding: 0px;
+        spacing: 0px;
+
+        // Sidebar
+        Rectangle {
+            width: 250px;
+            background: #1f2937; // gray-800
+
+            VerticalBox {
+                padding: 16px;
+                spacing: 10px;
+                alignment: start;
+
+                Text {
+                    text: "GoonAI Config";
+                    font-size: 20px;
+                    font-weight: 700;
+                    color: white;
+                }
+
+                Rectangle {
+                    height: 20px;
+                } // Spacer
+
+                // Settings Tab Button
+                Rectangle {
+                    height: 40px;
+                    background: root.active_tab == "settings" ? #2563eb : transparent; // blue-600
+                    border-radius: 4px;
+                    TouchArea {
+                        clicked => {
+                            root.active_tab = "settings";
+                        }
+                    }
+
+                    HorizontalBox {
+                        padding-left: 10px;
+                        alignment: start;
+                        Text {
+                            text: "⚙ Settings";
+                            color: white;
+                            vertical-alignment: center;
+                        }
+                    }
+                }
+
+                Rectangle {
+                    height: 20px;
+                } // Spacer
+
+                HorizontalBox {
+                    alignment: space-between;
+                    Text {
+                        text: "PACKS";
+                        color: #9ca3af; // gray-400
+                        font-size: 12px;
+                    }
+
+                    Rectangle {
+                        width: 20px;
+                        height: 20px;
+                        border-radius: 4px;
+                        background: #374151; // gray-700
+                        Text {
+                            text: "+";
+                            color: white;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+
+                        TouchArea {
+                            clicked => {
+                                root.create_pack();
+                            }
+                        }
+                    }
+                }
+
+                // Pack List
+                for pack in root.available_packs: Rectangle {
+                    height: 40px;
+                    background: (root.active_tab == "packs" && root.selected_pack == pack) ? #2563eb : transparent;
+                    border-radius: 4px;
+                    TouchArea {
+                        clicked => {
+                            root.active_tab = "packs";
+                            root.selected_pack = pack;
+                            root.select_pack(pack);
+                        }
+                    }
+
+                    HorizontalBox {
+                        padding-left: 10px;
+                        alignment: start;
+                        Text {
+                            text: "📁 " + pack;
+                            color: white;
+                            vertical-alignment: center;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Main Content Area
+        Rectangle {
+            background: #111827; // gray-900
+            padding: 32px;
+
+            // Settings View
+            if root.active_tab == "settings": VerticalBox {
+                alignment: start;
+                spacing: 20px;
+
+                Text {
+                    text: "Settings";
+                    font-size: 24px;
+                    font-weight: 700;
+                    color: white;
+                }
+
+                VerticalBox {
+                    spacing: 8px;
+                    Text {
+                        text: "User Name";
+                        color: #d1d5db;
+                        font-size: 14px;
+                    }
+
+                    LineEdit {
+                        text <=> root.settings.user_name;
+                        height: 40px;
+                        font-size: 16px;
+                    }
+                }
+
+                VerticalBox {
+                    spacing: 8px;
+                    Text {
+                        text: "Current Pack";
+                        color: #d1d5db;
+                        font-size: 14px;
+                    }
+
+                    ComboBox {
+                        model: root.available_packs;
+                        current-value <=> root.settings.current_pack;
+                        height: 40px;
+                    }
+                }
+
+                VerticalBox {
+                    spacing: 8px;
+                    Text {
+                        text: "Initial Mood";
+                        color: #d1d5db;
+                        font-size: 14px;
+                    }
+
+                    LineEdit {
+                        text <=> root.settings.initial_mood;
+                        height: 40px;
+                        font-size: 16px;
+                    }
+                }
+
+                Button {
+                    text: "Save Settings";
+                    primary: true;
+                    height: 40px;
+                    clicked => {
+                        root.save_settings();
+                    }
+                }
+            }
+
+            // Pack Editor View
+            if root.active_tab == "packs": VerticalBox {
+                alignment: start;
+                spacing: 20px;
+
+                HorizontalBox {
+                    alignment: space-between;
+                    Text {
+                        text: "Pack: " + root.selected_pack;
+                        font-size: 24px;
+                        font-weight: 700;
+                        color: white;
+                    }
+
+                    Button {
+                        text: "Save Pack";
+                        primary: true;
+                        height: 40px;
+                        clicked => {
+                            root.save_pack();
+                        }
+                    }
+                }
+
+                // Metadata Section
+                Rectangle {
+                    background: #1f2937; // gray-800
+                    border-radius: 8px;
+                    VerticalBox {
+                        padding: 16px;
+                        spacing: 16px;
+                        Text {
+                            text: "Metadata";
+                            font-size: 18px;
+                            font-weight: 600;
+                            color: white;
+                        }
+
+                        HorizontalBox {
+                            spacing: 16px;
+                            VerticalBox {
+                                Text {
+                                    text: "Name";
+                                    color: #d1d5db;
+                                    font-size: 14px;
+                                }
+
+                                LineEdit {
+                                    text <=> root.current_pack_meta.name;
+                                }
+                            }
+
+                            VerticalBox {
+                                Text {
+                                    text: "Version";
+                                    color: #d1d5db;
+                                    font-size: 14px;
+                                }
+
+                                LineEdit {
+                                    text <=> root.current_pack_meta.version;
+                                }
+                            }
+                        }
+
+                        Text {
+                            text: "Permissions";
+                            color: #d1d5db;
+                            font-size: 14px;
+                        }
+                        // Note: Slint doesn't have a FlowLayout easily, so we list them vertically or in fixed rows
+                        // For simplicity in this demo, just a text representation or a few checkboxes
+                        HorizontalBox {
+                            spacing: 10px;
+                            CheckBox {
+                                text: "Image";
+                                checked: true;
+                            }
+
+                            CheckBox {
+                                text: "Video";
+                                checked: true;
+                            }
+
+                            CheckBox {
+                                text: "Audio";
+                                checked: true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

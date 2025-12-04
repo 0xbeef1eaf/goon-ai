@@ -1,31 +1,11 @@
-use anyhow::Result;
 use goon_ai::assets::loader::AssetLoader;
 use goon_ai::assets::selector::AssetSelector;
 use goon_ai::assets::types::Asset;
 use goon_ai::config::pack::{Asset as ConfigAsset, Assets, Mood, PackConfig, PackMeta};
-use goon_ai::gui::content::ContentConstructor;
-use goon_ai::gui::window_manager::{GuiInterface, WindowHandle, WindowOptions};
+use goon_ai::gui::WindowSpawner;
 use goon_ai::permissions::{Permission, PermissionChecker, PermissionResolver, PermissionSet};
 use goon_ai::runtime::GoonRuntime;
 use goon_ai::runtime::runtime::RuntimeContext;
-
-struct MockGuiController;
-
-impl GuiInterface for MockGuiController {
-    fn create_window(&self, _options: WindowOptions) -> Result<WindowHandle> {
-        Ok(WindowHandle(uuid::Uuid::new_v4()))
-    }
-    fn close_window(&self, _handle: WindowHandle) -> Result<()> {
-        Ok(())
-    }
-    fn set_content(
-        &self,
-        _handle: WindowHandle,
-        _content: Box<dyn ContentConstructor>,
-    ) -> Result<()> {
-        Ok(())
-    }
-}
 
 #[tokio::test]
 async fn test_asset_loading_to_permission_check() {
@@ -41,6 +21,7 @@ async fn test_asset_loading_to_permission_check() {
             name: "Default".to_string(),
             description: "Default mood".to_string(),
             tags: vec!["default".to_string()],
+            prompt: None,
         }],
         assets: Assets {
             image: Some(vec![ConfigAsset {
@@ -56,6 +37,7 @@ async fn test_asset_loading_to_permission_check() {
             wallpaper: None,
         },
         websites: None,
+        prompts: None,
     };
 
     // User: Grants ONLY Image permission.
@@ -105,18 +87,17 @@ async fn test_asset_loading_to_permission_check() {
     // 5. Runtime Execution
     // We use the checker derived from the resolution step.
 
-    // Mock GuiController
-    let gui_controller = std::sync::Arc::new(MockGuiController);
+    // Use WindowSpawner
+    let (window_spawner, _spawner) = WindowSpawner::create();
     let registry_arc = std::sync::Arc::new(registry);
     let mood_clone = mood.clone();
 
     let context = RuntimeContext {
         permissions: checker.clone(),
-        gui_controller: gui_controller.clone(),
+        window_spawner: window_spawner.clone(),
         registry: registry_arc.clone(),
         mood: mood_clone.clone(),
         max_audio_concurrent: 10,
-        max_video_concurrent: 3,
     };
 
     let mut runtime = GoonRuntime::new(context);
@@ -144,11 +125,10 @@ async fn test_asset_loading_to_permission_check() {
     // Create a new runtime to avoid module name collision
     let context2 = RuntimeContext {
         permissions: checker.clone(),
-        gui_controller: gui_controller.clone(),
+        window_spawner: window_spawner.clone(),
         registry: registry_arc.clone(),
         mood: mood_clone.clone(),
         max_audio_concurrent: 10,
-        max_video_concurrent: 3,
     };
 
     let mut runtime2 = GoonRuntime::new(context2);

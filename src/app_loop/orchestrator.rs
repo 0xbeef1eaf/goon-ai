@@ -2,14 +2,13 @@ use crate::app_loop::state::{LoopState, MessageType};
 use crate::assets::loader::AssetLoader;
 use crate::config::pack::PackConfig;
 use crate::config::settings::Settings;
-use crate::gui::window_manager::GuiInterface;
+use crate::gui::WindowSpawnerHandle;
 use crate::llm::client::LLMClient;
 use crate::llm::conversation::ConversationManager;
 use crate::llm::prompt::PromptBuilder;
 use crate::permissions::PermissionChecker;
 use crate::runtime::runtime::{GoonRuntime, RuntimeContext};
 use crate::typescript::compiler::TypeScriptCompiler;
-use crate::typescript::sdk_generator::SdkGenerator;
 use anyhow::Result;
 use std::sync::Arc;
 use std::time::Duration;
@@ -20,7 +19,7 @@ pub struct Orchestrator {
     settings: Arc<Settings>,
     pack_config: Arc<PackConfig>,
     permissions: Arc<PermissionChecker>,
-    gui_controller: Arc<dyn GuiInterface>,
+    window_spawner: WindowSpawnerHandle,
 }
 
 impl Orchestrator {
@@ -28,14 +27,14 @@ impl Orchestrator {
         settings: Arc<Settings>,
         pack_config: Arc<PackConfig>,
         permissions: Arc<PermissionChecker>,
-        gui_controller: Arc<dyn GuiInterface>,
+        window_spawner: WindowSpawnerHandle,
     ) -> Self {
         Self {
             state: LoopState::new(),
             settings,
             pack_config,
             permissions,
-            gui_controller,
+            window_spawner,
         }
     }
 
@@ -57,18 +56,7 @@ impl Orchestrator {
         let compiler = TypeScriptCompiler::new();
 
         // Generate SDK definitions (asset-free)
-        // TODO: Filter modules based on permissions
-        let allowed_modules = vec![
-            "system".to_string(),
-            "image".to_string(),
-            "video".to_string(),
-            "audio".to_string(),
-            "hypno".to_string(),
-            "wallpaper".to_string(),
-            "prompt".to_string(),
-            "website".to_string(),
-        ];
-        let sdk_defs = SdkGenerator::generate_definitions(&allowed_modules);
+        let sdk_defs = crate::sdk::generate_definitions_for_permissions(&self.permissions);
 
         // Initialize Runtime
         let mood_name = &self.settings.runtime.pack.mood;
@@ -82,15 +70,15 @@ impl Orchestrator {
                 name: mood_name.clone(),
                 description: "Default mood".to_string(),
                 tags: vec![],
+                prompt: None,
             });
 
         let context = RuntimeContext {
             permissions: (*self.permissions).clone(),
-            gui_controller: self.gui_controller.clone(),
+            window_spawner: self.window_spawner.clone(),
             registry: registry.clone(),
             mood: mood.clone(),
             max_audio_concurrent: self.settings.runtime.popups.audio.max.unwrap_or(1) as usize,
-            max_video_concurrent: self.settings.runtime.popups.video.max.unwrap_or(1) as usize,
         };
 
         let mut runtime = GoonRuntime::new(context);
@@ -107,12 +95,14 @@ impl Orchestrator {
                 self.state.reset_retry();
             }
 
+            let execution_failed = self.state.retry_count > 0;
             let messages = PromptBuilder::build(
                 &self.pack_config,
                 &mood.name,
                 &self.settings.user,
                 &history,
                 &sdk_defs,
+                execution_failed,
             );
 
             // 2. Call LLM
@@ -167,6 +157,73 @@ impl Orchestrator {
 
             // Delay
             sleep(Duration::from_secs(5)).await;
+        }
+    }
+
+    pub async fn run_script(&mut self, script: &str) -> Result<()> {
+        println!("Running script in sandbox...");
+
+        // Initialize systems - following the same pattern as run()
+        let registry = Arc::new(AssetLoader::load(
+            &self.pack_config,
+            &self.settings.runtime.pack.current,
+        )?);
+
+        let compiler = TypeScriptCompiler::new();
+
+        // Generate SDK definitions (asset-free)
+        let _sdk_defs = crate::sdk::generate_definitions_for_permissions(&self.permissions);
+
+        // Get mood
+        let mood_name = &self.settings.runtime.pack.mood;
+        let mood = self
+            .pack_config
+            .moods
+            .iter()
+            .find(|m| &m.name == mood_name)
+            .cloned()
+            .unwrap_or_else(|| crate::config::pack::Mood {
+                name: mood_name.clone(),
+                description: "Default mood".to_string(),
+                tags: vec![],
+                prompt: None,
+            });
+
+        let context = RuntimeContext {
+            permissions: (*self.permissions).clone(),
+            window_spawner: self.window_spawner.clone(),
+            registry: registry.clone(),
+            mood: mood.clone(),
+            max_audio_concurrent: self.settings.runtime.popups.audio.max.unwrap_or(1) as usize,
+        };
+
+        let mut runtime = GoonRuntime::new(context);
+
+        // Execute the provided script
+        println!("Executing script...");
+        match compiler.compile(script) {
+            Ok(js_code) => {
+                println!("Script compiled successfully");
+                match runtime.execute_script(&js_code).await {
+                    Ok(_) => {
+                        println!("Script execution successful");
+                    }
+                    Err(e) => {
+                        eprintln!("Runtime error: {}", e);
+                        return Err(anyhow::anyhow!("Runtime Error: {}", e));
+                    }
+                }
+            }
+            Err(e) => {
+                eprintln!("Compilation error: {}", e);
+                return Err(anyhow::anyhow!("Compilation Error: {}", e));
+            }
+        }
+
+        // Keep the event loop running to allow GUI elements to render
+        println!("Script completed. Keeping GUI alive for rendering...");
+        loop {
+            sleep(Duration::from_millis(100)).await;
         }
     }
 }

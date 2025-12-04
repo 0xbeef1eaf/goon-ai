@@ -3,6 +3,11 @@ use crate::runtime::error::OpError;
 use deno_core::OpState;
 use deno_core::op2;
 
+/// Gets the current mood for the session.
+///
+/// The mood affects which assets are selected based on tag filtering.
+///
+/// @returns The current mood configuration.
 #[op2]
 #[serde]
 pub fn op_get_current_mood(state: &mut OpState) -> Result<Mood, OpError> {
@@ -10,6 +15,11 @@ pub fn op_get_current_mood(state: &mut OpState) -> Result<Mood, OpError> {
     Ok(mood.clone())
 }
 
+/// Sets the current mood for the session by name.
+///
+/// Changing the mood affects which assets are selected in subsequent operations.
+///
+/// @param mood_name - The name of the mood to set.
 #[op2(fast)]
 pub fn op_set_current_mood(
     state: &mut OpState,
@@ -41,12 +51,11 @@ pub fn op_set_current_mood(
         name: mood_name,
         description: String::new(),
         tags: Vec::new(),
+        prompt: None,
     };
 
     state.put(new_mood);
     Ok(())
 }
-
-pub const TS_SOURCE: &str = include_str!("js/pack.ts");
 
 deno_core::extension!(goon_pack, ops = [op_get_current_mood, op_set_current_mood],);

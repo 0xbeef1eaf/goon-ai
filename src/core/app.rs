@@ -1,12 +1,11 @@
 use crate::app_loop::orchestrator::Orchestrator;
 use crate::config::pack::PackConfig;
 use crate::config::settings::Settings;
-use crate::gui::event_loop::{create_event_loop, run_event_loop};
-use crate::gui::window_manager::{GuiController, WindowManager};
+use crate::gui::{WindowSpawner, run_event_loop};
 use crate::permissions::{PermissionChecker, PermissionResolver, PermissionSet};
 use anyhow::Result;
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 pub struct App {
     pub settings: Arc<Settings>,
@@ -81,34 +80,69 @@ impl App {
         let max_video = self.settings.runtime.popups.video.max.unwrap_or(1) as usize;
         println!("Max concurrent audio: {}, video: {}", max_audio, max_video);
 
-        // Initialize GUI
-        let (event_loop, proxy) = create_event_loop()?;
-        let window_manager = Arc::new(Mutex::new(WindowManager::new()));
-        let gui_controller = Arc::new(GuiController::new(proxy));
+        // Create window spawner channel pair
+        let (window_handle, window_spawner) = WindowSpawner::create();
 
         let mut orchestrator = Orchestrator::new(
             self.settings.clone(),
             self.pack_config.clone(),
             self.permissions.clone(),
-            gui_controller,
+            window_handle.clone(),
         );
 
-        // Spawn orchestrator in a separate thread with its own runtime
-        std::thread::spawn(move || {
-            let rt = tokio::runtime::Builder::new_current_thread()
-                .enable_all()
-                .build()
-                .unwrap();
+        // Schedule the orchestrator to run within the Slint event loop context
+        slint::spawn_local(async move {
+            if let Err(e) = orchestrator.run().await {
+                eprintln!("Orchestrator error: {}", e);
+            }
+            // Quit the event loop when done
+            let _ = slint::quit_event_loop();
+        })
+        .map_err(|e| anyhow::anyhow!("Failed to spawn orchestrator task: {}", e))?;
 
-            rt.block_on(async move {
-                if let Err(e) = orchestrator.run().await {
-                    eprintln!("Orchestrator error: {}", e);
-                }
-            });
-        });
+        // Run Slint event loop with window spawner
+        run_event_loop(window_spawner)?;
 
-        // Run event loop (blocks)
-        run_event_loop(event_loop, window_manager)?;
+        Ok(())
+    }
+
+    pub async fn run_script(&self, script: &str) -> Result<()> {
+        println!(
+            "App running script mode with mood: {}",
+            self.settings.runtime.pack.mood
+        );
+
+        let max_audio = self.settings.runtime.popups.audio.max.unwrap_or(1) as usize;
+        let max_video = self.settings.runtime.popups.video.max.unwrap_or(1) as usize;
+        println!("Max concurrent audio: {}, video: {}", max_audio, max_video);
+
+        // Create window spawner channel pair
+        let (window_handle, window_spawner) = WindowSpawner::create();
+
+        let mut orchestrator = Orchestrator::new(
+            self.settings.clone(),
+            self.pack_config.clone(),
+            self.permissions.clone(),
+            window_handle.clone(),
+        );
+
+        // Clone script for the closure
+        let script = script.to_string();
+
+        // Schedule the orchestrator to run within the Slint event loop context
+        // This ensures the Slint platform is initialized before we try to use it
+        slint::spawn_local(async move {
+            println!("Running script in sandbox...");
+            if let Err(e) = orchestrator.run_script(&script).await {
+                eprintln!("Orchestrator error: {}", e);
+            }
+            // Quit the event loop when done
+            let _ = slint::quit_event_loop();
+        })
+        .map_err(|e| anyhow::anyhow!("Failed to spawn script task: {}", e))?;
+
+        // Run Slint event loop with window spawner
+        run_event_loop(window_spawner)?;
 
         Ok(())
     }

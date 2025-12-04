@@ -2,10 +2,8 @@ use crate::assets::registry::AssetRegistry;
 use crate::assets::selector::AssetSelector;
 use crate::assets::types::Asset;
 use crate::config::pack::Mood;
-use crate::gui::window_manager::GuiInterface;
-use crate::media::image::animation::Animation;
-use crate::media::image::loader::load_image;
-use crate::media::image::renderer::ImageContent;
+use crate::gui::WindowSpawnerHandle;
+use crate::permissions::Permission;
 use crate::runtime::error::OpError;
 use crate::runtime::utils::check_permission;
 use crate::sdk::types::WindowOptions;
@@ -15,34 +13,41 @@ use serde::Deserialize;
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::Arc;
+use tracing::{error, info};
 use ts_rs::TS;
 
 #[derive(Deserialize, Debug, Default, TS)]
-#[ts(export)]
 #[serde(rename_all = "camelCase")]
 /// Options for displaying an image
 pub struct ImageOptions {
-    /// Tags to filter the images by
+    /// A list of additional tags to filter images by, they will be filtered by mood tags already
     pub tags: Option<Vec<String>>,
-    /// Duration to display the image in seconds
+    /// Duration to display the image in seconds, after this the window will be closed automatically
     pub duration: Option<u64>,
-    #[serde(flatten)]
-    pub window: WindowOptions,
+    /// Window configuration options
+    pub window: Option<WindowOptions>,
 }
 
+/// Displays an image in a new window.
+///
+/// Returns a handle ID that can be used to control the window (move, resize, close).
+///
+/// @param options - Optional configuration including tags for asset selection,
+///                  window position, size, and opacity.
+/// @returns A unique handle ID string for controlling this image window.
 #[op2(async)]
 #[string]
 pub async fn op_show_image(
     state: Rc<RefCell<OpState>>,
     #[serde] options: Option<ImageOptions>,
 ) -> Result<String, OpError> {
-    let (gui_controller, registry, mood) = {
+    let (window_spawner, registry, mood) = {
         let mut state = state.borrow_mut();
-        check_permission(&mut state, "image")?;
-        let gui = state.borrow::<Arc<dyn GuiInterface>>().clone();
+        check_permission(&mut state, Permission::Image)?;
+        let spawner = state.borrow::<WindowSpawnerHandle>().clone();
         let registry = state.borrow::<Arc<AssetRegistry>>().clone();
         let mood = state.borrow::<Mood>().clone();
-        (gui, registry, mood)
+        (spawner, registry, mood)
     };
 
     let opts = options.unwrap_or_default();
@@ -55,74 +60,27 @@ pub async fn op_show_image(
         .ok_or_else(|| OpError::new("No image found matching tags"))?;
 
     let path = match asset {
-        Asset::Image(img) => &img.path,
+        Asset::Image(img) => img.path.clone(),
         _ => return Err(OpError::new("Selected asset is not an image")),
     };
 
-    let path_str = path.to_str().unwrap();
-    let (content, width, height) = if path_str.to_lowercase().ends_with(".gif") {
-        if let Ok(anim) = Animation::load(path) {
-            let w = anim.frames[0].buffer.width();
-            let h = anim.frames[0].buffer.height();
-            (
-                ImageContent {
-                    image: None,
-                    animation: Some(anim),
-                },
-                w,
-                h,
-            )
-        } else {
-            let img = load_image(path_str).map_err(|e| OpError::new(&e.to_string()))?;
-            (
-                ImageContent {
-                    image: Some(img.clone()),
-                    animation: None,
-                },
-                img.width(),
-                img.height(),
-            )
-        }
-    } else {
-        let img = load_image(path_str).map_err(|e| OpError::new(&e.to_string()))?;
-        (
-            ImageContent {
-                image: Some(img.clone()),
-                animation: None,
-            },
-            img.width(),
-            img.height(),
-        )
-    };
+    info!("Spawning image window: {:?}", path);
 
-    let size = opts
-        .window
-        .size
-        .map(|s| (s.width, s.height))
-        .unwrap_or((width, height));
+    // Get window dimensions from options
+    let window = opts.window.as_ref();
+    let width = window.and_then(|w| w.size.as_ref()).map(|s| s.width);
+    let height = window.and_then(|w| w.size.as_ref()).map(|s| s.height);
+    let opacity = window.and_then(|w| w.opacity).unwrap_or(1.0);
 
-    let window_opts = crate::gui::window_manager::WindowOptions {
-        size: Some(size),
-        opacity: opts.window.opacity.unwrap_or(1.0),
-        always_on_top: opts.window.always_on_top.unwrap_or(false),
-        click_through: opts.window.click_through.unwrap_or(false),
-        position: opts.window.position.map(|p| (p.x, p.y)),
-        decorations: false,
-        timeout: opts.duration.map(std::time::Duration::from_secs),
-        ..Default::default()
-    };
-
-    let handle = gui_controller
-        .create_window(window_opts)
-        .map_err(|e| OpError::new(&e.to_string()))?;
-
-    gui_controller
-        .set_content(handle, Box::new(content))
-        .map_err(|e| OpError::new(&e.to_string()))?;
+    // Spawn the image window
+    let handle = window_spawner
+        .spawn_image(path, width, height, opacity)
+        .map_err(|e| {
+            error!("Failed to spawn image window: {}", e);
+            OpError::new(&e.to_string())
+        })?;
 
     Ok(handle.0.to_string())
 }
-
-pub const TS_SOURCE: &str = include_str!("js/image.ts");
 
 deno_core::extension!(goon_image, ops = [op_show_image],);

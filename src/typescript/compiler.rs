@@ -51,6 +51,7 @@ impl TypeScriptCompiler {
                                 disallow_ambiguous_jsx_like: false,
                             })),
                             target: Some(EsVersion::Es2020),
+                            external_helpers: false.into(), // Inline helpers instead of importing
                             ..Default::default()
                         },
                         ..Default::default()

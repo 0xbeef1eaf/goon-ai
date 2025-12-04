@@ -18,11 +18,13 @@ fn test_asset_flow_from_config_to_selection() {
                 name: "Happy".to_string(),
                 description: "Joyful content".to_string(),
                 tags: vec!["happy".to_string()],
+                prompt: None,
             },
             Mood {
                 name: "Sad".to_string(),
                 description: "Melancholy content".to_string(),
                 tags: vec!["sad".to_string()],
+                prompt: None,
             },
         ],
         assets: Assets {
@@ -49,6 +51,7 @@ fn test_asset_flow_from_config_to_selection() {
             wallpaper: None,
         },
         websites: None,
+        prompts: None,
     };
 
     // 2. Load Assets

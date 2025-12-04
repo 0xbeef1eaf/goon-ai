@@ -15,12 +15,15 @@ opencode.json
 *.log
 
 # Config files
-settings.yaml
+settings.toml
 
 # Temporary files
 *.tmp
 *.swp
 
 # Packs
-/packs/*
+/packs/
 !/packs/TestPack/
+
+web/node_modules/
+web/dist/

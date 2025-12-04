@@ -9,6 +9,7 @@ on:
 env:
   CARGO_TERM_COLOR: always
   V8_FROM_SOURCE: "0" # Force using prebuilt V8 binaries, as by default on CI it tries to build from source
+  BUILD_REQUIREMENTS: "libasound2-dev libglib2.0-dev libatk1.0-dev libgdk-pixbuf2.0-dev libgtk-3-dev libavutil-dev libavformat-dev libavcodec-dev libavfilter-dev libavdevice-dev libclang-dev libxdo-dev"
 
 jobs:
   test:
@@ -34,7 +35,7 @@ jobs:
       - name: Setup alsa
         run: |
           sudo apt-get update
-          sudo apt-get install -y libasound2-dev
+          sudo apt-get install -y ${BUILD_REQUIREMENTS}
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
@@ -78,7 +79,7 @@ jobs:
       - name: Setup alsa
         run: |
           sudo apt-get update
-          sudo apt-get install -y libasound2-dev
+          sudo apt-get install -y ${BUILD_REQUIREMENTS}
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -91,6 +92,7 @@ jobs:
     name: Merge Dependabot PRs
     runs-on: ubuntu-latest
     permissions:
+      contents: write
       pull-requests: write
     needs: [test, fmt, clippy]
     if: github.actor == 'dependabot[bot]'
@@ -101,7 +103,7 @@ jobs:
           script: |
             const pr = context.payload.pull_request;
             if (pr && pr.user.login === 'dependabot[bot]') {
-              await github.pulls.merge({
+              await github.rest.pulls.merge({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 pull_number: pr.number,

@@ -6,38 +6,39 @@ pub mod audio;
 pub mod hypno;
 pub mod image;
 pub mod pack;
-pub mod prompt;
 pub mod system;
 pub mod video;
 pub mod wallpaper;
 pub mod website;
+pub mod write_lines;
 
 pub mod analysis;
 pub mod generator;
 pub mod metadata;
+pub mod runtime_gen;
 pub mod templates;
 pub mod types;
 
-pub const INIT_SOURCE: &str = include_str!("js/init.ts");
-
 pub fn get_all_typescript_sources() -> Vec<String> {
     vec![
-        INIT_SOURCE.to_string(),
-        image::TS_SOURCE.to_string(),
-        pack::TS_SOURCE.to_string(),
-        video::TS_SOURCE.to_string(),
-        audio::TS_SOURCE.to_string(),
-        hypno::TS_SOURCE.to_string(),
-        wallpaper::get_source(),
-        prompt::TS_SOURCE.to_string(),
-        website::get_source(),
-        system::TS_SOURCE.to_string(),
+        runtime_gen::generate_init_runtime(),
+        runtime_gen::generate_image_runtime(),
+        runtime_gen::generate_pack_runtime(),
+        runtime_gen::generate_video_runtime(),
+        runtime_gen::generate_audio_runtime(),
+        runtime_gen::generate_hypno_runtime(),
+        runtime_gen::generate_wallpaper_runtime(),
+        runtime_gen::generate_write_lines_runtime(),
+        runtime_gen::generate_website_runtime(),
+        runtime_gen::generate_system_runtime(),
     ]
 }
 
 pub fn generate_typescript_definitions(allowed_modules: &[String]) -> String {
     generator::generate_definitions(allowed_modules)
 }
+
+use tracing::info;
 
 pub fn generate_definitions_for_permissions(permissions: &PermissionChecker) -> String {
     let mut allowed_modules = Vec::new();
@@ -56,12 +57,17 @@ pub fn generate_definitions_for_permissions(permissions: &PermissionChecker) -> 
     if permissions.has_permission(Permission::Wallpaper) {
         allowed_modules.push("wallpaper".to_string());
     }
-    if permissions.has_permission(Permission::Prompt) {
-        allowed_modules.push("prompt".to_string());
+    if permissions.has_permission(Permission::WriteLines) {
+        allowed_modules.push("writeLines".to_string());
     }
     if permissions.has_permission(Permission::Website) {
         allowed_modules.push("website".to_string());
     }
+
+    info!(
+        "Generating SDK definitions for modules: {:?}",
+        allowed_modules
+    );
 
     generator::generate_definitions(&allowed_modules)
 }
@@ -77,7 +83,7 @@ mod tests {
         let defs = generate_typescript_definitions(&modules);
         assert!(defs.contains("/** GoonAI SDK */"));
         assert!(defs.contains("interface WindowHandle")); // From types.ts (always included)
-        assert!(defs.contains("class Pack")); // From pack.ts (always included)
+        assert!(defs.contains("class pack")); // From pack.ts (always included)
         assert!(!defs.contains("class image"));
     }
 
@@ -105,7 +111,7 @@ mod tests {
         assert!(defs.contains("class image"));
         assert!(defs.contains("class video"));
         assert!(defs.contains("class audio"));
-        assert!(defs.contains("class textPrompt"));
+        assert!(defs.contains("class writeLines"));
         assert!(defs.contains("class wallpaper"));
         assert!(defs.contains("class website"));
     }

@@ -1,19 +1,48 @@
 use crate::sdk::{analysis, metadata};
 use std::path::Path;
 
+/// Convert a Rust op function name to a TypeScript method name.
+/// e.g., "op_show_image" -> "show"
+/// e.g., "op_play_audio" -> "play"
+/// e.g., "op_set_mood" -> "setMood"
+fn op_name_to_ts_method(op_name: &str) -> String {
+    // Remove "op_" prefix
+    let name = op_name.strip_prefix("op_").unwrap_or(op_name);
+
+    // Split by underscores and convert to camelCase
+    let parts: Vec<&str> = name.split('_').collect();
+    if parts.is_empty() {
+        return name.to_string();
+    }
+
+    // First part stays lowercase, rest get capitalized first letter
+    let mut result = parts[0].to_string();
+    for part in &parts[1..] {
+        if !part.is_empty() {
+            let mut chars = part.chars();
+            if let Some(first) = chars.next() {
+                result.push_str(&first.to_uppercase().to_string());
+                result.push_str(chars.as_str());
+            }
+        }
+    }
+
+    result
+}
+
+use tracing::info;
+
 pub fn generate_definitions(allowed_modules: &[String]) -> String {
+    info!("Generator received allowed_modules: {:?}", allowed_modules);
     let all_modules = metadata::get_modules();
     let mut definitions = String::new();
 
     definitions.push_str("/** GoonAI SDK */\n");
 
-    for module in all_modules {
+    for module in &all_modules {
         let include = match module.permission {
             None => true, // Always include
-            Some(perm) => {
-                allowed_modules.contains(&perm.to_string())
-                    || allowed_modules.contains(&"all".to_string())
-            }
+            Some(perm) => allowed_modules.iter().any(|m| m == perm || m == "all"),
         };
 
         if include {
@@ -23,10 +52,60 @@ pub fn generate_definitions(allowed_modules: &[String]) -> String {
 
             if Path::new(&source_path).exists() {
                 let (ops, structs) = analysis::analyze_source(Path::new(&source_path));
-                for _op in ops {
-                    // This is where we could auto-generate the function signature
-                    // For now, we rely on the template, but we could verify or append here
-                    // definitions.push_str(&format!("// Found op: {}\n", op.name));
+
+                // Auto-generate function signatures from ops
+                for op in &ops {
+                    let ts_method_name = op_name_to_ts_method(&op.name);
+
+                    // Generate doc comment if docs exist
+                    if !op.docs.is_empty() {
+                        let doc_block = op
+                            .docs
+                            .iter()
+                            .map(|d| format!("   * {}", d))
+                            .collect::<Vec<_>>()
+                            .join("\n");
+
+                        // Find the method in the template and inject docs before it
+                        let method_patterns = [
+                            format!("{}(", ts_method_name),
+                            format!("{} (", ts_method_name),
+                        ];
+
+                        for pattern in method_patterns {
+                            if let Some(idx) = template.find(&pattern) {
+                                // Look back a reasonable amount to check for existing JSDoc
+                                // (JSDoc comments are typically within 20 lines / ~500 chars before the method)
+                                let look_back_start = idx.saturating_sub(500);
+                                let preceding_content = &template[look_back_start..idx];
+
+                                // Check if there's a JSDoc comment that ends close to the method
+                                // by looking for "*/" followed by mostly whitespace until the method
+                                if let Some(jsdoc_end) = preceding_content.rfind("*/") {
+                                    // Check if there's only whitespace and keywords between */ and the method
+                                    let between = &preceding_content[jsdoc_end + 2..];
+                                    let between_trimmed = between.trim();
+                                    // Allow common method modifiers between JSDoc and method name
+                                    let is_only_modifiers = between_trimmed.is_empty()
+                                        || between_trimmed == "static"
+                                        || between_trimmed == "static async"
+                                        || between_trimmed == "async"
+                                        || between_trimmed.starts_with("static");
+                                    if is_only_modifiers {
+                                        // Already has a JSDoc comment, skip injection
+                                        break;
+                                    }
+                                }
+
+                                // Find the start of the line (after previous newline)
+                                let line_start =
+                                    template[..idx].rfind('\n').map(|i| i + 1).unwrap_or(0);
+                                let doc_comment = format!("  /**\n{}   */\n  ", doc_block);
+                                template.insert_str(line_start, &doc_comment);
+                                break;
+                            }
+                        }
+                    }
                 }
 
                 // Inject struct and field documentation
@@ -144,12 +223,46 @@ pub fn generate_definitions(allowed_modules: &[String]) -> String {
         }
     }
 
+    // Generate global 'goon' namespace
+    definitions.push_str("\ndeclare const goon: {\n");
+    for module in all_modules {
+        let include = match module.permission {
+            None => true,
+            Some(perm) => allowed_modules.iter().any(|m| m == perm || m == "all"),
+        };
+
+        if include {
+            // We assume the class name matches the module name
+            // e.g. module "image" -> class image
+            // But we should check if the template actually exports it.
+            // For now, we assume standard naming convention used in our TS files.
+            // Some modules like "types" don't have a class to export on 'goon'.
+            if module.name == "pack" {
+                definitions.push_str("    pack: typeof Pack;\n");
+            } else if module.name == "system" {
+                definitions.push_str("    system: typeof System;\n");
+            } else if module.name != "types" {
+                definitions.push_str(&format!("    {}: typeof {};\n", module.name, module.name));
+            }
+        }
+    }
+    definitions.push_str("};\n");
+
     definitions
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_op_name_to_ts_method() {
+        assert_eq!(op_name_to_ts_method("op_show_image"), "showImage");
+        assert_eq!(op_name_to_ts_method("op_play_audio"), "playAudio");
+        assert_eq!(op_name_to_ts_method("op_set_mood"), "setMood");
+        assert_eq!(op_name_to_ts_method("op_show"), "show");
+        assert_eq!(op_name_to_ts_method("show_image"), "showImage");
+    }
 
     #[test]
     fn test_generate_definitions_includes_always_modules() {

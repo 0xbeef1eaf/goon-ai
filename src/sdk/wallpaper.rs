@@ -3,6 +3,7 @@ use crate::assets::selector::AssetSelector;
 use crate::assets::types::Asset;
 use crate::config::pack::Mood;
 use crate::media::wallpaper::{PlatformWallpaperSetter, WallpaperSetter};
+use crate::permissions::Permission;
 use crate::runtime::error::OpError;
 use crate::runtime::utils::check_permission;
 use deno_core::OpState;
@@ -16,13 +17,16 @@ use std::sync::Arc;
 use ts_rs::TS;
 
 #[derive(Deserialize, Debug, Default, TS)]
-#[ts(export)]
 #[serde(rename_all = "camelCase")]
+/// Options for setting the desktop wallpaper
 pub struct WallpaperOptions {
-    #[ts(optional)]
+    /// A list of additional tags to filter wallpaper images by, they will be filtered by mood tags already
     tags: Option<Vec<String>>,
 }
 
+/// Sets the desktop wallpaper to an image from the pack.
+///
+/// @param options - Optional configuration including tags for asset selection.
 #[op2(async)]
 pub async fn op_set_wallpaper(
     state: Rc<RefCell<OpState>>,
@@ -30,7 +34,7 @@ pub async fn op_set_wallpaper(
 ) -> Result<(), OpError> {
     let (registry, mood) = {
         let mut state = state.borrow_mut();
-        check_permission(&mut state, "wallpaper")?;
+        check_permission(&mut state, Permission::Wallpaper)?;
         let registry = state.borrow::<Arc<AssetRegistry>>().clone();
         let mood = state.borrow::<Mood>().clone();
         (registry, mood)
@@ -75,12 +79,6 @@ pub async fn op_set_wallpaper(
         .map_err(|e| OpError::new(&format!("Failed to set wallpaper: {}", e)))?;
 
     Ok(())
-}
-
-pub const TS_SOURCE: &str = include_str!("js/wallpaper.ts");
-
-pub fn get_source() -> String {
-    TS_SOURCE.to_string()
 }
 
 deno_core::extension!(goon_wallpaper, ops = [op_set_wallpaper],);

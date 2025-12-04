@@ -1,4 +1,4 @@
-use crate::gui::window_manager::WindowHandle;
+use crate::gui::WindowHandle;
 use std::collections::{HashMap, VecDeque};
 use std::time::{Duration, Instant};
 

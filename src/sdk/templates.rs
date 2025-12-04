@@ -1,4 +1,4 @@
-use crate::sdk::{audio, hypno, image, pack, prompt, system, types, video, wallpaper, website};
+use crate::sdk::{audio, hypno, image, runtime_gen, types, video, wallpaper, website, write_lines};
 use ts_rs::TS;
 
 fn extract_definitions(source: &str) -> String {
@@ -37,51 +37,51 @@ interface WindowHandle {{
 }
 
 pub fn system_ts() -> String {
-    extract_definitions(system::TS_SOURCE)
+    extract_definitions(&runtime_gen::generate_system_runtime())
 }
 
 pub fn pack_ts() -> String {
-    extract_definitions(pack::TS_SOURCE)
+    extract_definitions(&runtime_gen::generate_pack_runtime())
 }
 
 pub fn image_ts() -> String {
     let options_interface = image::ImageOptions::decl();
-    let source = extract_definitions(image::TS_SOURCE);
+    let source = extract_definitions(&runtime_gen::generate_image_runtime());
     format!("{}\n{}", options_interface, source)
 }
 
 pub fn video_ts() -> String {
     let options_interface = video::VideoOptions::decl();
-    let source = extract_definitions(video::TS_SOURCE);
+    let source = extract_definitions(&runtime_gen::generate_video_runtime());
     format!("{}\n{}", options_interface, source)
 }
 
 pub fn audio_ts() -> String {
     let options_interface = audio::AudioOptions::decl();
-    let source = extract_definitions(audio::TS_SOURCE);
+    let source = extract_definitions(&runtime_gen::generate_audio_runtime());
     format!("{}\n{}", options_interface, source)
 }
 
-pub fn prompt_ts() -> String {
-    let options_interface = prompt::PromptOptions::decl();
-    let source = extract_definitions(prompt::TS_SOURCE);
+pub fn write_lines_ts() -> String {
+    let options_interface = write_lines::WriteLinesOptions::decl();
+    let source = extract_definitions(&runtime_gen::generate_write_lines_runtime());
     format!("{}\n{}", options_interface, source)
 }
 
 pub fn wallpaper_ts() -> String {
     let options_interface = wallpaper::WallpaperOptions::decl();
-    let source = extract_definitions(&wallpaper::get_source());
+    let source = extract_definitions(&runtime_gen::generate_wallpaper_runtime());
     format!("{}\n{}", options_interface, source)
 }
 
 pub fn website_ts() -> String {
     let options_interface = website::WebsiteOptions::decl();
-    let source = extract_definitions(&website::get_source());
+    let source = extract_definitions(&runtime_gen::generate_website_runtime());
     format!("{}\n{}", options_interface, source)
 }
 
 pub fn hypno_ts() -> String {
     let options_interface = hypno::HypnoOptions::decl();
-    let source = extract_definitions(hypno::TS_SOURCE);
+    let source = extract_definitions(&runtime_gen::generate_hypno_runtime());
     format!("{}\n{}", options_interface, source)
 }
