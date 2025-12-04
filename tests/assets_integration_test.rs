@@ -1,3 +1,5 @@
+#![cfg(not(miri))]
+
 use goon_ai::assets::loader::AssetLoader;
 use goon_ai::assets::selector::AssetSelector;
 use goon_ai::assets::types::Asset;

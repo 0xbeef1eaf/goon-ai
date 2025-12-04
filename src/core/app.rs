@@ -6,6 +6,7 @@ use crate::permissions::{PermissionChecker, PermissionResolver, PermissionSet};
 use anyhow::Result;
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
 
 pub struct App {
     pub settings: Arc<Settings>,
@@ -88,6 +89,7 @@ impl App {
             self.pack_config.clone(),
             self.permissions.clone(),
             window_handle.clone(),
+            Arc::new(AtomicBool::new(true)),
         );
 
         // Schedule the orchestrator to run within the Slint event loop context
@@ -124,6 +126,7 @@ impl App {
             self.pack_config.clone(),
             self.permissions.clone(),
             window_handle.clone(),
+            Arc::new(AtomicBool::new(true)),
         );
 
         // Clone script for the closure

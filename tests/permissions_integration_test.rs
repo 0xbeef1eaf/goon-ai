@@ -1,3 +1,5 @@
+#![cfg(not(miri))]
+
 use goon_ai::gui::WindowSpawner;
 use goon_ai::permissions::{Permission, PermissionChecker, PermissionResolver, PermissionSet};
 use goon_ai::runtime::GoonRuntime;

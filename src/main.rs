@@ -81,8 +81,13 @@ fn main() -> Result<()> {
             info!("Starting orchestrator...");
 
             // Create and run the orchestrator
-            let mut orchestrator =
-                Orchestrator::new(settings, pack_config, permissions, window_handle_for_llm);
+            let mut orchestrator = Orchestrator::new(
+                settings,
+                pack_config,
+                permissions,
+                window_handle_for_llm,
+                is_running_for_llm.clone(),
+            );
 
             // Run the orchestrator loop
             // TODO: Add check for is_running to pause/resume

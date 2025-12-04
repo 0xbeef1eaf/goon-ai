@@ -1,3 +1,5 @@
+#![cfg(not(miri))]
+
 use goon_ai::config::pack::{Assets, Mood, PackConfig, PackMeta};
 use goon_ai::config::settings::User;
 use goon_ai::llm::conversation::ConversationManager;
