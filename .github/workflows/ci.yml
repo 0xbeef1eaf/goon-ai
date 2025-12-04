@@ -124,10 +124,6 @@ jobs:
       - uses: Swatinem/rust-cache@v2
 
       - run: cargo codspeed build --workspace
-      - uses: CodSpeedHQ/action@v3
-        with:
-          token: ${{ secrets.CODSPEED_TOKEN }}
-          run: cargo codspeed run
 
   merge-dependabot:
     name: Merge Dependabot PRs
