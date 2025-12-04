@@ -150,6 +150,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[cfg_attr(miri, ignore)]
     async fn test_runtime_execution() {
         let (context, _spawner) = create_test_context();
         let mut runtime = GoonRuntime::new(context);
@@ -164,6 +165,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[cfg_attr(miri, ignore)]
     async fn test_bigint_duration() {
         let (context, _spawner) = create_test_context();
         let mut runtime = GoonRuntime::new(context);
@@ -188,6 +190,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[cfg_attr(miri, ignore)]
     async fn test_permission_denied() {
         let set = PermissionSet::new(); // No permissions
         let permissions = PermissionChecker::new(set);
@@ -220,6 +223,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[cfg_attr(miri, ignore)]
     async fn test_pack_availability() {
         let mut set = PermissionSet::new();
         set.add(Permission::Image); // Just some permission

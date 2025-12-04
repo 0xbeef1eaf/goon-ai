@@ -5,6 +5,7 @@ use goon_ai::runtime::runtime::RuntimeContext;
 use goon_ai::sdk::generate_definitions_for_permissions;
 
 #[tokio::test]
+#[cfg_attr(miri, ignore)]
 async fn test_full_permission_flow() {
     // 1. Simulate Configuration Loading
     // User grants: Image, Audio

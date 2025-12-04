@@ -41,6 +41,7 @@ mod tests {
     use std::sync::Arc;
 
     #[tokio::test]
+    #[cfg_attr(miri, ignore)]
     async fn test_executor_run() {
         let executor = Executor::new();
         let set = PermissionSet::new();
@@ -71,6 +72,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[cfg_attr(miri, ignore)]
     async fn test_executor_compile_error() {
         let executor = Executor::new();
         let set = PermissionSet::new();

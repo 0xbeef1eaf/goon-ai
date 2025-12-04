@@ -44,6 +44,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn test_platform_setter_implements_trait() {
         let setter = PlatformWallpaperSetter;
         // Just check if it compiles and we can call the method (even if it fails)
