@@ -71,7 +71,7 @@ name = "goon"
 path = "src/main.rs"
 
 [dev-dependencies]
-criterion = "0.5"
+criterion = "0.8"
 codspeed-criterion-compat = "2.7.2"
 
 [[bench]]
