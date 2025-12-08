@@ -32,7 +32,7 @@ toml = "0.9"
 slint = { version = "1.14.1", features = ["gettext", "backend-winit", "backend-winit-wayland", "backend-winit-x11"] }
 smol = "2"
 swc = "47.0.0"
-swc_common = { version = "18.0.0", features = ["tty-emitter"] }
+swc_common = { version = "18.0.1", features = ["tty-emitter"] }
 swc_ecma_ast = "19.0.0"
 swc_ecma_codegen = "21.0.0"
 swc_ecma_parser = "28.0.0"
