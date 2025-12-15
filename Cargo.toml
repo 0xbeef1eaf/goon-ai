@@ -8,7 +8,7 @@ build = "build.rs"
 anyhow = "1.0"
 cpal = "0.16"
 deno_core = "0.372.0"
-deno_error = "0.7.1"
+deno_error = "0.7.3"
 derive_more = { version = "2", features = ["deref", "deref_mut"] }
 tray-icon = "0.21.2"
 muda = "0.17.1"
