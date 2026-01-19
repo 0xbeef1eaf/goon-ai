@@ -23,7 +23,7 @@ open = "5.3.3"
 proc-macro2 = "1.0.104"
 quote = "1.0.42"
 rand = "0.9"
-reqwest = "0.12"
+reqwest = "0.13"
 ringbuf = "0.4"
 rodio = "0.21.1"
 serde = { version = "1.0", features = ["derive"] }
@@ -57,7 +57,7 @@ windows-sys = { version = "0.61", features = ["Win32_UI_WindowsAndMessaging", "W
 objc = "0.2"
 
 [build-dependencies]
-reqwest = { version = "0.12", features = ["blocking"] }
+reqwest = { version = "0.13", features = ["blocking"] }
 zip = "6.0"
 tar = "0.4"
 flate2 = "1.0"
