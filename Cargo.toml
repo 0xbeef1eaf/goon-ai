@@ -60,7 +60,7 @@ objc = "0.2"
 reqwest = { version = "0.13", features = ["blocking"] }
 zip = "6.0"
 tar = "0.4"
-flate2 = "1.0"
+flate2 = "1.1"
 anyhow = "1.0"
 sevenz-rust = "0.6"
 slint-build = "1.14.1"
