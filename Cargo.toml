@@ -44,7 +44,7 @@ ts-rs = "11.1.0"
 url = "2.5"
 uuid = { version = "1.21.0", features = ["v4", "serde"] }
 walkdir = "2"
-chrono = "0.4.43"
+chrono = "0.4.44"
 winit = "0.30"
 
 [target.'cfg(target_os = "linux")'.dependencies]
