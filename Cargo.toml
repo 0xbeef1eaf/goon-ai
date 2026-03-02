@@ -34,7 +34,7 @@ smol = "2"
 swc = "47.0.0"
 swc_common = { version = "18.0.0", features = ["tty-emitter"] }
 swc_ecma_ast = "19.0.0"
-swc_ecma_codegen = "21.0.0"
+swc_ecma_codegen = "24.0.0"
 swc_ecma_parser = "28.0.0"
 syn = { version = "2.0.117", features = ["full", "visit"] }
 tokio = { version = "1", features = ["full"] }
