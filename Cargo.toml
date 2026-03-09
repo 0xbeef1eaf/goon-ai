@@ -21,7 +21,7 @@ image = { version = "0.25", features = ["gif"] }
 ollama-rs = "0.3"
 open = "5.3.3"
 proc-macro2 = "1.0.106"
-quote = "1.0.44"
+quote = "1.0.45"
 rand = "0.10"
 reqwest = "0.13"
 ringbuf = "0.4"
