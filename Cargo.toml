@@ -33,7 +33,7 @@ slint = { version = "1.14.1", features = ["gettext", "backend-winit", "backend-w
 smol = "2"
 swc = "47.0.0"
 swc_common = { version = "18.0.0", features = ["tty-emitter"] }
-swc_ecma_ast = "19.0.0"
+swc_ecma_ast = "23.0.0"
 swc_ecma_codegen = "26.0.1"
 swc_ecma_parser = "28.0.0"
 syn = { version = "2.0.117", features = ["full", "visit"] }
