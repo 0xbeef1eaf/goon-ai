@@ -3162,7 +3162,7 @@ dependencies = [
  "swc",
  "swc_common 18.0.0",
  "swc_ecma_ast 19.0.0",
- "swc_ecma_codegen 26.0.0",
+ "swc_ecma_codegen 26.0.1",
  "swc_ecma_parser",
  "syn 2.0.117",
  "tar",
@@ -7557,9 +7557,9 @@ dependencies = [
 
 [[package]]
 name = "swc_common"
-version = "21.0.0"
+version = "21.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8a771e6a245d82746eee4a06849e1ed481ddf0e6fa1d5794a833b516513bb414"
+checksum = "078f2144aa2c33ff8485773f1b81b9985fa2d00f4ad60879158ad6897db2de88"
 dependencies = [
  "anyhow",
  "ast_node",
@@ -7673,7 +7673,7 @@ dependencies = [
  "rustc-hash 2.1.1",
  "string_enum",
  "swc_atoms",
- "swc_common 21.0.0",
+ "swc_common 21.0.1",
  "swc_visit",
  "unicode-id-start",
 ]
@@ -7704,9 +7704,9 @@ dependencies = [
 
 [[package]]
 name = "swc_ecma_codegen"
-version = "26.0.0"
+version = "26.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c6432e37b54db97709c72977f5149b4a46a4b9a198311fbbc146116d884fac3e"
+checksum = "fafbcdd29cc03b0c04860bb0143e781e13a4e2dac03eb8747df520f602e0aa94"
 dependencies = [
  "ascii",
  "compact_str",
@@ -7719,7 +7719,7 @@ dependencies = [
  "serde",
  "swc_allocator",
  "swc_atoms",
- "swc_common 21.0.0",
+ "swc_common 21.0.1",
  "swc_ecma_ast 23.0.0",
  "swc_ecma_codegen_macros",
  "tracing",
