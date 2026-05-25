@@ -11,7 +11,7 @@ deno_core = "0.380.0"
 deno_error = "0.7.3"
 derive_more = { version = "2", features = ["deref", "deref_mut"] }
 tray-icon = "0.22.1"
-muda = "0.17.2"
+muda = "0.19.2"
 bytemuck = "1.25.0"
 dirs = "6.0.0"
 ffmpeg-next = "8"
